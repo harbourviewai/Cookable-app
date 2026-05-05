@@ -1,0 +1,15 @@
+# Normalize line endings to LF in the repo; let git handle checkout conversion
+* text=auto eol=lf
+
+# Force binary files to not be touched
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.otf binary
