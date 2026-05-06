@@ -1,7 +1,7 @@
 # Plan: Week 1 — Foundation (Days 1-7)
 
 **Created:** 2026-04-30
-**Status:** Draft
+**Status:** Implemented (code complete; Day 1 manual account steps still pending)
 **Request:** Stand up the Cookable app foundation per the 30-day build plan
 **Relevant knowledge docs:** 04-build-plan.md, 05-tech-stack.md, 06-database-schema.md, 16-pre-launch-checklist.md
 
@@ -126,3 +126,43 @@ Get the Cookable codebase to a state where Day 8 (AI integration) can start clea
 
 - A user can install the dev build, sign in, and snap a photo that lands in Supabase Storage with a corresponding `scans` row.
 - All Day 8 prerequisites are met: stack is live, auth works, image upload works.
+
+---
+
+## Implementation Notes
+
+**Date:** 2026-05-05
+**Implemented by:** Claude Code
+
+**What was done:**
+- Expo project initialized (SDK 54, Expo Router v6, TypeScript, new arch)
+- All 5 screens built: Sign-in, Home, Camera (Scan), Saved Recipes, Profile
+- Auth routing in root `_layout.tsx` — unauthenticated users redirected to sign-in automatically
+- Fonts loaded: Fraunces 400/700 + Inter 400/500/600
+- Camera screen: full capture/picker/resize/upload/error state machine
+- Supabase client with AsyncStorage session persistence
+- `useUser()` hook for auth state across the app
+- Full migration SQL with all 7 tables + RLS + auto-create-user trigger
+- Brand colors, tab navigation, app.json all configured
+
+**Deviations from plan:**
+- Google sign-in: used `expo-auth-session` + `expo-web-browser` + Supabase OAuth instead of `@react-native-google-signin/google-signin`. Rationale: native Google signin package requires a dev build; the OAuth approach works in Expo Go for testing.
+- Dark mode: `userInterfaceStyle` set to `light` in app.json (Cookable is light-mode-first per brand; dark mode polish is Week 4).
+- `expo-image` not used (not installed by default); used React Native's built-in `Image` for the preview step.
+
+**Still requires manual action before app runs:**
+- Create `app/.env.local` from `app/.env.example` with real Supabase URL + anon key
+- Run `supabase/migrations/001_initial_schema.sql` in Supabase SQL editor
+- Create `scan-images` and `avatars` storage buckets in Supabase Dashboard
+- Enable Google OAuth provider in Supabase Dashboard → Auth → Providers
+- Apple Developer account + Sign in with Apple capability
+
+**Validation checklist status:**
+- [x] Expo project initializes (TypeScript clean, no TS errors in Cookable code)
+- [ ] All Week 1 accounts created — pending (manual)
+- [ ] Supabase schema applied — pending (manual)
+- [ ] Apple sign-in works — pending (needs Apple Dev account + real device)
+- [ ] Google sign-in works — pending (needs Supabase Google OAuth configured)
+- [ ] Camera captures, resizes, uploads — pending (needs Supabase credentials)
+- [x] `notes/journal.md` updated
+- [x] `CLAUDE.md` "Build State" updated
