@@ -99,23 +99,22 @@ Full brand system: `knowledge/12-brand-identity.md`
 
 ## Build State (update as you go)
 
-- **Week:** 1 complete
-- **Day:** 7 of 30 (Week 1 code + audits done; manual accounts still pending)
-- **Last shipped:** Week 1 audits closed — Days 2-7 reviewed, fixed, journaled (2026-05-05)
-- **Active blocker:** No Supabase credentials yet — app will throw on launch until `.env.local` is created
+- **Week:** 2 in progress
+- **Day:** 8 of 30 (Week 1 complete — code + audits + manual account setup done; ready for Edge Function build)
+- **Last shipped:** Week 2 plan drafted (2026-05-06); all Week 1 manual account steps completed (2026-05-06)
+- **Active blocker:** None — Supabase is live, Anthropic API key in hand. Next step: add API key to Supabase Edge Function secrets and build `generate-recipes` function.
 - **App codebase:** Expo project at `app/` — all Week 1 screens built, audits clean, TypeScript passes for Cookable code (one untracked default-template file aside)
-- **Accounts ready:** Apple Dev (no), Google Play (no), Anthropic (no), Supabase (no), AdMob (no), RevenueCat (no), PostHog (no), Domain (no)
+- **Accounts ready:** Apple Dev (yes), Google Play (yes), Anthropic (yes), Supabase (yes), AdMob (yes), RevenueCat (yes), PostHog (yes), Domain (yes)
+- **AI model in use:** `claude-sonnet-4-6` (knowledge docs reference 4.5 — 4.6 is current; plan + migration 003 updated accordingly)
 
-### Next manual steps (Day 1 account setup — required before app runs)
-1. Create Supabase project → copy URL + anon key → create `app/.env.local` from `app/.env.example`
-2. Run `app/supabase/migrations/001_initial_schema.sql` in Supabase SQL editor
-3. Create storage buckets (`scan-images` private, `avatars` public) in Supabase Dashboard → Storage
-4. Run `app/supabase/migrations/002_storage.sql` in SQL editor (applies storage RLS — must run AFTER buckets exist)
-5. Enable Google OAuth in Supabase Dashboard → Auth → Providers, then add redirect URLs to Supabase Auth → URL Configuration: `cookable://auth/callback` (dev/prod builds) AND the Expo Go URL printed when `npm start` runs (e.g. `exp://192.168.x.x:8081`) so Google sign-in works in Expo Go too. Mirror these in Google Cloud Console → OAuth client → Authorized redirect URIs.
-6. Create Apple Developer account → enable Sign in with Apple
-7. Create Anthropic account → generate API key (will be added to Supabase Edge Function secrets in Day 8, NOT to `app/.env.local`)
-8. Create AdMob, RevenueCat, PostHog accounts (can wait until Week 3)
-9. Register domain
+### Next steps — Week 2 (Day 8)
+1. Install Supabase CLI if not already: `npm install -g supabase` or `brew install supabase/tap/supabase`
+2. From `app/`: `supabase link --project-ref <project-ref>` (project ref in Supabase Dashboard → Settings → General)
+3. Add Anthropic secret: `supabase secrets set ANTHROPIC_API_KEY=sk-ant-...`
+4. Build `app/supabase/functions/generate-recipes/index.ts` per `plans/2026-05-06-week-2-core-magic.md`
+5. Run `app/supabase/migrations/003_model_version.sql` to update `scans.model_used` default to `claude-sonnet-4-6`
+
+Week 2 full plan: `plans/2026-05-06-week-2-core-magic.md`
 
 Update this section weekly or when state changes meaningfully.
 
