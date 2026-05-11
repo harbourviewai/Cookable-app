@@ -195,3 +195,51 @@ Week 1 closed (Day 7 of 30). All code-level Days 2-7 work is complete and audite
 - [x] CLAUDE.md "Build State" reflects Day 7
 
 **Next:** Week 2 kickoff — create plan for Days 8-14 (Anthropic Sonnet 4.5 vision integration with structured JSON output, recipe display screen, editable ingredient list, save/favorite, basic profile). Day 8 prerequisites: Anthropic API key in Supabase Edge Function secrets, Supabase project actually live (Day 1 manual steps still outstanding).
+
+## 2026-05-11 — Weekly progress check
+
+# Cookable Build Progress
+
+**As of:** 2026-05-11
+
+## Schedule
+- **Plan target:** Day 12 of 30
+- **Actual progress:** Day 8 of 30
+- **Variance:** 4 days behind
+
+## What's done
+- Week 1 Foundation (Days 1-7): all code complete and audited
+  - Expo SDK 54 project initialized (TypeScript, Expo Router, new arch enabled)
+  - Brand theme (`constants/Colors.ts`) — Forest Pine, Saffron, Linen palette; Fraunces + Inter fonts loaded
+  - 4-tab navigation: Home, Scan, Saved, Profile
+  - Auth flow: Apple Sign In (iOS) + Google OAuth (Supabase + WebBrowser, Expo Go-friendly)
+  - Camera screen: capture, gallery picker, image resize (1024px long edge), Supabase Storage upload, scans row insert
+  - Migration SQL: 7 tables, RLS on each, auto-create-user trigger, moddatetime triggers, storage RLS in `002_storage.sql`
+  - Full audit fixes (Days 2-7): idempotent user trigger, nonce wiring, cancel error code, post-sign-in display_name write, upload zero-byte fix, resize early-out, permission settings deep-link, mid-upload unmount guards, expo-crypto UUIDs
+  - All 8 accounts confirmed: Apple Dev, Google Play, Anthropic, Supabase, AdMob, RevenueCat, PostHog, Domain
+  - Week 2 plan drafted (`plans/2026-05-06-week-2-core-magic.md`)
+
+## What's in flight
+- `plans/2026-05-06-week-2-core-magic.md` — **Status: Draft** (ready to implement; no Week 2 code written yet)
+
+## What's next (the critical path)
+1. Link Supabase CLI and add Anthropic API key to Edge Function secrets (`supabase secrets set ANTHROPIC_API_KEY=...`) — prerequisite for all Week 2 AI work
+2. Build and deploy `app/supabase/functions/generate-recipes/index.ts` (Days 8-10) — the core magic; every downstream feature depends on it
+3. Wire camera screen to call the Edge Function and build the results screen (`app/app/scan/[id].tsx`) — completes the Camera → AI → Recipes loop, the #1 build priority
+
+## Pre-launch checklist
+- Accounts: 8 / 9 complete (Resend / Beehiiv email not yet confirmed)
+- Legal: 0 / 5 complete
+- Brand assets: 2 / 7 complete (color tokens + fonts in code; logo, icon, screenshots, press kit not done)
+- App readiness: 0 / 13 complete (auth + camera code written and audited but not validated end-to-end on a real device)
+- Pre-launch testing: 0 / 4 complete
+- Distribution prep: 0 / 8 complete
+
+## Risks / blockers
+- **4 days behind schedule by calendar.** Today is Day 12 by date; actual build state is Day 8. Week 2 (Days 8-14) has not yet started — all tasks remain in the plan as "Draft."
+- **Manual Supabase setup may be incomplete.** The project is "live" per CLAUDE.md, but migrations (`001_initial_schema.sql`, `002_storage.sql`), storage buckets, and `.env.local` are listed as pending manual actions. The Edge Function cannot be tested until these are confirmed done.
+- **Auth not validated end-to-end.** Apple Sign In and Google OAuth code is written and audited but neither has been tested on a real device. This blocks a real Camera → AI → Recipes round trip.
+- **Week 3 monetization (Days 15-21) starts in 10 calendar days.** If Week 2 slips further, monetization work gets compressed and the 30-day launch date is at risk.
+
+## Suggested focus this week
+With the build 4 days behind by calendar, the single most important move is to complete the Day 8 prerequisites (Supabase CLI link + Anthropic secret) and execute the Week 2 plan without delay. The `generate-recipes` Edge Function is the load-bearing piece — recipe display, editable ingredients, save flow, and the paywall trigger all depend on it. Aim to have the full Camera → AI → 3 Recipes round trip working by end of Day 10 (2026-05-13), then move straight into the editable ingredient list and recipe detail on Days 11-12. That recovers the slip before Week 3 monetization must begin.
