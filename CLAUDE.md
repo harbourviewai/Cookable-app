@@ -99,22 +99,47 @@ Full brand system: `knowledge/12-brand-identity.md`
 
 ## Build State (update as you go)
 
-- **Week:** 2 in progress
-- **Day:** 8 of 30 (Week 1 complete — code + audits + manual account setup done; ready for Edge Function build)
-- **Last shipped:** Week 2 plan drafted (2026-05-06); all Week 1 manual account steps completed (2026-05-06)
-- **Active blocker:** None — Supabase is live, Anthropic API key in hand. Next step: add API key to Supabase Edge Function secrets and build `generate-recipes` function.
-- **App codebase:** Expo project at `app/` — all Week 1 screens built, audits clean, TypeScript passes for Cookable code (one untracked default-template file aside)
-- **Accounts ready:** Apple Dev (yes), Google Play (yes), Anthropic (yes), Supabase (yes), AdMob (yes), RevenueCat (yes), PostHog (yes), Domain (yes)
-- **AI model in use:** `claude-sonnet-4-6` (knowledge docs reference 4.5 — 4.6 is current; plan + migration 003 updated accordingly)
+- **Week:** 3 complete; Week 4 in progress (Days 22-25 done)
+- **Day:** 25 of 30 (Days 8-14 done — Edge Function live, camera→results loop, ingredient editor + recipe detail, save/favorite, profile + scan counter; Days 15-16 done — AdMob banner + interstitial; Days 17-19 done — RevenueCat paywall + webhook; Days 20-21 done — feature gates + soft prompt + Week 3 retro; Days 22-23 done — Pantry tab + grocery list; Days 24-25 done — onboarding flow + anonymous first scan)
+- **Last shipped:** 2026-05-13 — Recipe loading scene (Day 26 polish). `app/components/RecipeLoading.tsx` replaces the photo+spinner overlay during the `analyzing` phase with a branded full-screen Linen scene: Pine bowl + Saffron swirl composited from two independent PNGs (rendered via `tools/render-icons.mjs`), swirl on a 1.6s breathe loop, Fraunces caption cycling through four time-driven slots ("Looking at your fridge…" → "Spotting what you've got…" → "Building 3 recipes for you…" → "Finishing up your recipes…"). Reduce-motion + VoiceOver live region wired. Prior last shipped: Days 24-25 — 8-screen onboarding flow (see `notes/journal.md` for full detail).
+- **Active blocker:** None. Android paywall testing needs Play Console internal-testing track + IAP products (`cookable_plus_monthly`, `cookable_plus_annual`). iOS deferred — no Apple Dev account (financial constraint); `EXPO_PUBLIC_REVENUECAT_APPLE_KEY` empty; purchases are Android-only until resolved.
+- **App codebase:** Expo project at `app/`. Profile + save/favorite + scan-counter all wired to `public.users` + `public.saved_recipes`. `RecipeDetail` shared between scan-detail and saved-detail. Saved-recipe lookup matches by `(user_id, scan_id, title)`. Most screens consume `useUserContext()`; one straggler — `AdBanner` still reads `useUser()` directly, not blocking, flagged for Week 4.
+- **Ads contract (Day 15-16):** Test IDs in dev (`__DEV__ === true` always returns Google's universal test units). Production reads from `EXPO_PUBLIC_ADMOB_BANNER_ID_*` / `EXPO_PUBLIC_ADMOB_INTERSTITIAL_ID_*` env vars (banner IDs in `.env.local`; interstitial IDs need adding pre-launch). App-level AdMob IDs in `app.json` plugins — currently test IDs; swap to prod via `eas.json` prod profile env. Non-personalized mode at SDK init (no ATT prompt). `useInterstitial` cadence: scan #2, #4, #6 … (`lifetime % 2 === 0 && > 0`), 1 per 4 min per session.
+- **RevenueCat contract (Days 17-19):** Android key in `.env.local` as `EXPO_PUBLIC_REVENUECAT_GOOGLE_KEY`. iOS key empty. `useSubscription` seeds from `profile.subscription_tier` to prevent flash. Webhook deployed as Supabase Edge Function (`--no-verify-jwt`), `Authorization: Bearer <REVENUECAT_WEBHOOK_SECRET>`. Entitlement: `cookable_plus`. Offerings: `default` with `cookable_plus_monthly` ($4.99) + `cookable_plus_annual` ($29.99), both 7-day trial.
+- **Feature gate matrix:** Source of truth in `knowledge/02-pricing-and-tiers.md` "Locked feature matrix". Maps every Plus gate (scans, ads, saves, dietary filters, soft prompt, scan counter, future pantry/grocery) to its enforcement location and `?source=` paywall attribution. Update this table whenever a gate moves.
+- **Accounts ready:** Apple Dev (no — financial constraint; deferred), Google Play (yes), Anthropic (yes), Supabase (yes), AdMob (yes), RevenueCat (yes), PostHog (yes), Domain (yes)
+- **AI model in use:** `claude-sonnet-4-6` (knowledge docs reference 4.5 — 4.6 is current; migration 003 applied accordingly)
+- **Auth flow:** Google sign-in uses the **implicit OAuth flow** (Hermes lacks `crypto.subtle` for PKCE S256). Week 4 polish — switch to PKCE via `react-native-quick-crypto` or `expo-standard-web-crypto`.
+- **Edge Function regen contract:** `isRegeneration = scan.recipes !== null` → bypasses the 10-min cache lookup and skips both the scan-limit check and the `scan_count_week` increment. Quota is per-photo, not per-AI-call. Deployed to production 2026-05-07.
+- **Pantry contract (Days 22-23):** Tables `pantry_items` / `grocery_lists` / `grocery_items` already exist in migration 001 (Day 22's planned migration 005 was not needed). Pantry auto-populate runs only on `tier === 'plus' && !isRegeneration`; upsert on `(user_id, ingredient_name)` against the partial unique index `idx_pantry_unique` (where `deleted_at is null`). Grocery list is single-active-list; `clearCompleted` either archives the whole list (`completed_at = now()`) when every item is checked, or deletes only the checked rows. Re-deploy `generate-recipes` to Supabase before the next Plus scan.
+- **Onboarding contract (Days 24-25):** Anonymous Supabase auth must be enabled in the Supabase dashboard. Existing `handle_new_user` trigger in migration 001 creates `public.users` rows for all auth inserts and does not exclude anonymous users. Apply migration `005_onboarding_completed_at.sql` before testing fresh installs. App typecheck is clean for RN app code; `npm run typecheck` still reports expected Deno Edge Function errors because Supabase functions are included in the RN tsconfig.
+- **App icon contract (2026-05-09):** SVG masters live in `app/assets/icon-source/` (master, adaptive-foreground, splash); rendered PNGs live in `app/assets/images/`. Re-render via `node tools/render-icons.mjs` (uses `sharp` devDep) any time the SVG changes. `icon.png` is flat RGB (no alpha — Apple requirement); `adaptive-icon.png` is transparent foreground scaled to the 66% Android safe zone, paired with `adaptiveIcon.backgroundColor: #2D5F4E` (Pine) in `app.json`; `splash-icon.png` is mono-Pine on transparent against the Linen splash bg. Spec source: `.claude/design-extract/cookable/project/Cookable App Icon.html`.
 
-### Next steps — Week 2 (Day 8)
-1. Install Supabase CLI if not already: `npm install -g supabase` or `brew install supabase/tap/supabase`
-2. From `app/`: `supabase link --project-ref <project-ref>` (project ref in Supabase Dashboard → Settings → General)
-3. Add Anthropic secret: `supabase secrets set ANTHROPIC_API_KEY=sk-ant-...`
-4. Build `app/supabase/functions/generate-recipes/index.ts` per `plans/2026-05-06-week-2-core-magic.md`
-5. Run `app/supabase/migrations/003_model_version.sql` to update `scans.model_used` default to `claude-sonnet-4-6`
+### Next steps — Week 4 (polish & ship, Days 22-30)
+Per `knowledge/04-build-plan.md` steps 22-30. Plan to be written in a fresh `plans/2026-05-XX-week-4-polish-and-ship.md` before Day 22 code.
 
-Week 2 full plan: `plans/2026-05-06-week-2-core-magic.md`
+**Headline goals:**
+1. **Pantry tracking + grocery list (Days 22-23)** — Plus-only feature. Pantry surface aggregates detected ingredients across scans + a grocery-list generator from missing-ingredient sets on saved recipes. Storage shape (new tables vs `pantry_items` JSONB on `users`) TBD in plan. Add to Locked feature matrix when wired.
+2. **Onboarding 8-screen flow (Days 24-25)** — implemented. Fresh users see six pre-scan screens, first scan runs as anonymous, auth gate and soft paywall appear post-scan.
+3. **App Store + Play Store assets (Days 26-27)** — next. Listing copy from `knowledge/11-app-store-listing.md`, 10 screenshots in all required sizes, ATT-free Privacy Nutrition Labels, Data Safety section, app icon all sizes, splash artwork.
+4. **TestFlight beta + Play Console internal testing (Days 28-29)** — 10-20 testers each. Use `02-pricing-and-tiers.md` Locked Feature Matrix as the QA runbook. Bug-fix pass.
+5. **Submit (Day 30)** — App Store Connect + Play Console submissions, allow 24-48h iOS review.
+
+**Pre-coding manual steps (Day 22+ prerequisites):**
+- Apple Developer account ($99/yr) — until purchased, iOS testing is blocked. Day 28 hard blocker if still missing.
+- Play Console internal-testing track + IAP product creation (`cookable_plus_monthly` $4.99, `cookable_plus_annual` $29.99, both 7-day trial). Required before Android paywall sandbox testing.
+- AdMob: pull prod interstitial unit IDs into `eas.json` prod profile env (banner IDs already wired).
+- Legal: privacy policy + Terms of Service hosted at `cookable.app/privacy` and `/terms` (URLs already constants in `app/lib/links.ts`).
+- Domain DNS for landing page + waitlist email capture.
+
+**Watch list rolled in from Week 3 retro:**
+- `AdBanner` `useUser` → `useUserContext` (one straggler from the Days 17-19 lift).
+- Trial-end banner ("Trial ends May 15") on profile — `users.trial_ends_at` populated, not displayed.
+- Toast portalization (4× call sites; not a hot path yet).
+- iOS RevenueCat key population once Apple Dev is purchased.
+
+Week 2 full plan: `plans/2026-05-06-week-2-core-magic.md` (archived complete).
+Week 3 full plan: `plans/2026-05-08-week-3-monetization.md` (Days 15-21 implemented).
 
 Update this section weekly or when state changes meaningfully.
 

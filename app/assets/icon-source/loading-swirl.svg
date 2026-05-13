@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Loading scene: Saffron swirl on transparent canvas. Same 1024×1024 coordinate
+       space as loading-bowl.svg so stacking the two PNGs at identical size aligns
+       the swirl naturally above the bowl without offset adjustment in RN. -->
+  <path d="M 512 500 C 380 440, 380 360, 512 320 C 644 280, 644 200, 512 160 C 432 130, 488 70, 512 40" fill="none" stroke="#E89B3C" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

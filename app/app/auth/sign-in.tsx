@@ -78,9 +78,29 @@ export default function SignInScreen() {
       if (error || !data.url) throw error ?? new Error('No OAuth URL returned')
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo)
+      if (result.type !== 'success') return
 
-      if (result.type === 'success') {
-        await supabase.auth.exchangeCodeForSession(result.url)
+      // Two response shapes are possible:
+      //   PKCE flow  → exp://.../auth/callback?code=...        (preferred)
+      //   Implicit   → exp://.../auth/callback#access_token=...&refresh_token=...
+      // Handle both so we're resilient if PKCE ever falls back.
+      const url = new URL(result.url)
+      const code = url.searchParams.get('code')
+      const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''))
+      const accessToken = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
+
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+        if (exchangeError) throw exchangeError
+      } else if (accessToken && refreshToken) {
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+        if (setSessionError) throw setSessionError
+      } else {
+        throw new Error('OAuth callback returned no code or tokens')
       }
     } catch (err: any) {
       console.error('Google sign-in error:', err)

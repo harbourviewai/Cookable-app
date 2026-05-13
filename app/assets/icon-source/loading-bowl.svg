@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Loading scene: Pine bowl on transparent canvas. Paired with loading-swirl.svg
+       so the swirl can animate independently in RN. Same coordinate space as the
+       master icon — stack both PNGs at equal size for pixel-perfect composition. -->
+  <path d="M 222 560 C 222 560, 222 718, 414 740 C 470 746, 554 746, 610 740 C 802 718, 802 560, 802 560 A 290 38 0 0 1 222 560 Z" fill="#2D5F4E"/>
+  <ellipse cx="512" cy="560" rx="278" ry="34" fill="#234E40"/>
+</svg>

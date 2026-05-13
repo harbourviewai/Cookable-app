@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Cookable — App Icon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pine:#2D5F4E;
+    --pine-light:#4A8470;
+    --pine-lighter:#C8DDD4;
+    --pine-whisper:#EEF4F1;
+    --saffron:#E89B3C;
+    --saffron-soft:#F4C58A;
+    --charcoal:#1A2421;
+    --charcoal-soft:#3A4844;
+    --linen:#FAF7F2;
+    --stone:#F0EDE6;
+    --stone-border:#E0DCD2;
+    --mid:#8A8A85;
+    --light:#C5C2BC;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--linen);color:var(--charcoal);
+    font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  body{padding:64px 72px 96px;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .f{font-family:'Fraunces',serif;letter-spacing:-0.015em;}
+
+  /* Header */
+  .doc-head{display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:1px solid var(--stone-border);padding-bottom:24px;margin-bottom:64px;}
+  .brand{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--pine);
+    letter-spacing:-0.02em;display:flex;align-items:baseline;gap:0;}
+  .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--saffron);margin-left:4px;align-self:flex-end;margin-bottom:6px;}
+  .doc-title{font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--mid);font-weight:600;margin-top:6px;}
+  .doc-meta{display:flex;gap:48px;}
+  .meta-item{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--mid);font-weight:500;}
+  .meta-item b{display:block;color:var(--charcoal);font-weight:600;letter-spacing:0;text-transform:none;font-size:13px;margin-bottom:2px;font-family:'Inter';}
+
+  /* Section header */
+  .section{margin-top:80px;}
+  .section:first-of-type{margin-top:0;}
+  .section-head{display:flex;align-items:baseline;gap:14px;margin-bottom:32px;}
+  .section-num{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--mid);letter-spacing:0.04em;}
+  .section-title{font-family:'Fraunces',serif;font-weight:500;font-size:22px;color:var(--charcoal);letter-spacing:-0.01em;}
+  .section-rule{flex:1;height:1px;background:var(--stone-border);margin-bottom:6px;}
+  .section-aside{font-size:12px;color:var(--mid);}
+
+  /* Hero — Master */
+  .hero{display:grid;grid-template-columns:1fr 360px;gap:80px;align-items:center;}
+  .master-stage{
+    position:relative;display:flex;align-items:center;justify-content:center;
+    background:#fff;border:1px solid var(--stone-border);border-radius:24px;
+    padding:80px;
+  }
+  .master-tile{
+    width:560px;height:560px;border-radius:0;overflow:hidden;
+    box-shadow:0 24px 48px -16px rgba(45,95,78,0.15), 0 0 0 1px rgba(0,0,0,0.04);
+    position:relative;
+  }
+  .corner-lbl{
+    position:absolute;font-family:'JetBrains Mono',monospace;font-size:10px;
+    color:var(--mid);letter-spacing:0.05em;
+  }
+  .corner-lbl.tl{top:24px;left:24px;}
+  .corner-lbl.tr{top:24px;right:24px;}
+  .corner-lbl.bl{bottom:24px;left:24px;}
+  .corner-lbl.br{bottom:24px;right:24px;}
+
+  .hero-side h1{font-family:'Fraunces',serif;font-weight:500;font-size:40px;line-height:44px;
+    letter-spacing:-0.02em;color:var(--charcoal);margin:0;}
+  .hero-side p{font-size:15px;line-height:23px;color:var(--charcoal-soft);margin-top:18px;max-width:330px;}
+  .pull{display:flex;flex-direction:column;gap:14px;margin-top:32px;}
+  .pull-row{display:flex;justify-content:space-between;border-top:1px solid var(--stone-border);padding-top:10px;font-size:13px;}
+  .pull-row .k{color:var(--mid);}
+  .pull-row .v{color:var(--charcoal);font-weight:500;font-family:'JetBrains Mono',monospace;}
+
+  /* Variants row */
+  .variants{display:grid;grid-template-columns:repeat(4,1fr);gap:32px;}
+  .variant{display:flex;flex-direction:column;align-items:flex-start;}
+  .variant-tile{
+    width:100%;aspect-ratio:1/1;border-radius:0;overflow:hidden;
+    box-shadow:0 12px 24px -10px rgba(45,95,78,0.12), 0 0 0 1px rgba(0,0,0,0.04);
+  }
+  .variant-meta{margin-top:14px;display:flex;flex-direction:column;gap:3px;}
+  .variant-name{font-size:13px;font-weight:600;color:var(--charcoal);}
+  .variant-desc{font-size:12px;color:var(--mid);line-height:16px;}
+  .variant-mono{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--mid);margin-top:6px;letter-spacing:0.03em;}
+
+  /* Platform masks row */
+  .masks{display:grid;grid-template-columns:repeat(4,1fr);gap:48px;}
+  .mask-cell{display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .mask-tile{width:160px;height:160px;overflow:hidden;
+    box-shadow:0 8px 20px -8px rgba(45,95,78,0.12), 0 0 0 1px rgba(0,0,0,0.04);}
+  .mask-ios{border-radius:36px;}
+  .mask-androidsq{border-radius:24px;}
+  .mask-circle{border-radius:50%;}
+  .mask-square{border-radius:0;}
+  .mask-label{font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--mid);font-weight:600;}
+
+  /* Home screen test */
+  .home-row{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;}
+  .phone{
+    aspect-ratio:9/19.5;border-radius:42px;padding:8px;background:#0a0a0a;
+    box-shadow:0 24px 48px -20px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.18);
+    position:relative;overflow:hidden;
+  }
+  .phone-screen{
+    width:100%;height:100%;border-radius:34px;overflow:hidden;position:relative;
+  }
+  .phone-island{position:absolute;top:8px;left:50%;transform:translateX(-50%);
+    width:84px;height:24px;border-radius:14px;background:#000;z-index:5;}
+  .phone-status{position:absolute;top:0;left:0;right:0;height:36px;display:flex;
+    align-items:center;justify-content:space-between;padding:14px 22px 0;
+    color:#fff;font-size:11px;font-weight:600;z-index:4;}
+  .phone-grid{
+    position:absolute;left:0;right:0;top:62px;bottom:120px;
+    display:grid;grid-template-columns:repeat(4,1fr);gap:14px 0;
+    padding:0 18px;align-content:flex-start;
+  }
+  .home-icon{display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .home-icon .tile{width:54px;height:54px;border-radius:13px;overflow:hidden;
+    box-shadow:0 1px 2px rgba(0,0,0,0.2);}
+  .home-icon .name{font-size:9px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.5);font-weight:500;letter-spacing:0.01em;}
+  .phone-dock{position:absolute;left:14px;right:14px;bottom:36px;height:74px;
+    border-radius:24px;background:rgba(255,255,255,0.18);backdrop-filter:blur(20px);
+    display:flex;align-items:center;justify-content:space-around;padding:0 14px;}
+  .dock-icon{width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,0.3);}
+
+  .phone-bg-a{background:linear-gradient(160deg,#3a4a55 0%, #1f2a30 100%);}
+  .phone-bg-b{background:linear-gradient(180deg,#e8c89a 0%, #b88a5e 100%);}
+  .phone-bg-c{background:#fafafa;}
+
+  .phone-cap{margin-top:16px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:var(--mid);font-weight:600;text-align:center;}
+  .phone-cap em{font-style:normal;color:var(--charcoal);font-family:'JetBrains Mono',monospace;text-transform:none;letter-spacing:0;}
+
+  /* Construction grid */
+  .construction{display:grid;grid-template-columns:480px 1fr;gap:64px;align-items:flex-start;}
+  .grid-stage{
+    background:#fff;border:1px solid var(--stone-border);border-radius:18px;
+    padding:48px;display:flex;align-items:center;justify-content:center;
+  }
+  .grid-tile{width:100%;aspect-ratio:1/1;position:relative;
+    box-shadow:0 8px 20px -8px rgba(45,95,78,0.10), 0 0 0 1px rgba(0,0,0,0.04);
+  }
+  .grid-overlay{position:absolute;inset:0;pointer-events:none;}
+  .anno{font-size:13px;line-height:20px;color:var(--charcoal-soft);}
+  .anno-list{display:flex;flex-direction:column;gap:18px;}
+  .anno-item{padding-left:22px;position:relative;}
+  .anno-item::before{
+    content:"";position:absolute;left:0;top:7px;width:8px;height:8px;
+    border-radius:50%;background:var(--saffron);
+  }
+  .anno-item b{display:block;color:var(--charcoal);font-weight:600;margin-bottom:2px;font-size:13px;}
+
+  /* Color tokens */
+  .tokens{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;}
+  .token{display:flex;align-items:center;gap:14px;}
+  .swatch{width:56px;height:56px;border-radius:10px;flex-shrink:0;
+    box-shadow:0 0 0 1px rgba(0,0,0,0.06);}
+  .tk-name{font-size:13px;color:var(--charcoal);font-weight:600;}
+  .tk-hex{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--mid);margin-top:2px;letter-spacing:0.02em;}
+  .tk-role{font-size:11px;color:var(--mid);margin-top:1px;}
+
+  /* Footer */
+  .footer{margin-top:96px;padding-top:32px;border-top:1px solid var(--stone-border);
+    display:flex;justify-content:space-between;font-size:11px;color:var(--mid);
+    text-transform:uppercase;letter-spacing:0.08em;font-weight:500;}
+
+</style>
+</head>
+<body>
+
+<!-- ═════════════════════════════════════ ICON SVG (reusable defs) ═════════════════════════════════════ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+
+    <!-- ─── Bowl + swirl symbol — designed at 1024×1024 viewBox ─── -->
+    <!-- Reusable: change <use> fill via CSS variables; bowl/swirl are independent paths -->
+
+    <symbol id="cookable-master" viewBox="0 0 1024 1024">
+      <!-- Background fill -->
+      <rect width="1024" height="1024" fill="var(--ic-bg, #2D5F4E)"/>
+
+      <!-- Bowl body (Linen) -->
+      <!-- Bowl rim sits at y=560; bottom curve apex at y=720 (~70%); width 580 (mid 56%) -->
+      <!-- Single closed path: rim ellipse top + curving body -->
+      <path
+        d="
+          M 222 560
+          C 222 560, 222 718, 414 740
+          C 470 746, 554 746, 610 740
+          C 802 718, 802 560, 802 560
+          A 290 38 0 0 1 222 560
+          Z
+        "
+        fill="var(--ic-bowl, #FAF7F2)"
+      />
+
+      <!-- Bowl interior (rim opening, deeper Pine for depth) -->
+      <!-- Sits inside the rim, slightly inset -->
+      <ellipse cx="512" cy="560" rx="278" ry="34" fill="var(--ic-inner, #4A8470)"/>
+
+      <!-- Steam swirl — single confident stroke, two loose turns rising from center -->
+      <!-- Stroke width 56 (~5.5% of 1024), rounded caps, saffron -->
+      <path
+        d="
+          M 512 500
+          C 380 440, 380 360, 512 320
+          C 644 280, 644 200, 512 160
+          C 432 130, 488 70, 512 40
+        "
+        fill="none"
+        stroke="var(--ic-swirl, #E89B3C)"
+        stroke-width="56"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </symbol>
+
+  </defs>
+</svg>
+
+<!-- ─── Inline style helpers per-variant ─── -->
+<style>
+  .ic { display:block; width:100%; height:100%; }
+  .v-primary    { --ic-bg:#2D5F4E; --ic-bowl:#FAF7F2; --ic-inner:#4A8470; --ic-swirl:#E89B3C; }
+  .v-dark       { --ic-bg:#1A2421; --ic-bowl:#FAF7F2; --ic-inner:#3A4844; --ic-swirl:#F0AD55; }
+  .v-mono-white { --ic-bg:#2D5F4E; --ic-bowl:#FAF7F2; --ic-inner:#234E40; --ic-swirl:#FAF7F2; }
+  .v-mono-pine  { --ic-bg:#FAF7F2; --ic-bowl:#2D5F4E; --ic-inner:#234E40; --ic-swirl:#2D5F4E; }
+</style>
+
+<!-- ════════════════════════════════════ HEADER ════════════════════════════════════ -->
+<div class="doc-head">
+  <div>
+    <div class="brand">cookable<span class="dot"></span></div>
+    <div class="doc-title">App Icon · Master &amp; Variants</div>
+  </div>
+  <div class="doc-meta">
+    <div class="meta-item"><b>1024 × 1024</b>PNG, no transparency</div>
+    <div class="meta-item"><b>Locked direction</b>Bowl + saffron swirl</div>
+    <div class="meta-item"><b>v1.0</b>May 9, 2026</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ 01. MASTER ════════════════════════════════════ -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">01</span>
+    <span class="section-title">Master</span>
+    <span class="section-rule"></span>
+    <span class="section-aside">Primary — saffron on Pine</span>
+  </div>
+
+  <div class="hero">
+    <div class="master-stage">
+      <div class="corner-lbl tl">1024 × 1024</div>
+      <div class="corner-lbl tr mono">// no transparency</div>
+      <div class="corner-lbl bl mono">cookable.icon@v1</div>
+      <div class="corner-lbl br">PNG / SVG export</div>
+
+      <div class="master-tile v-primary">
+        <svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg>
+      </div>
+    </div>
+
+    <div class="hero-side">
+      <h1>A bowl. A spark of steam. Nothing else.</h1>
+      <p>The bowl is the brand's quiet confidence. The swirl is the moment a meal appears out of nothing. One stroke, one warmth — saffron does all the work.</p>
+      <div class="pull">
+        <div class="pull-row"><span class="k">Background</span><span class="v">#2D5F4E</span></div>
+        <div class="pull-row"><span class="k">Bowl</span><span class="v">#FAF7F2</span></div>
+        <div class="pull-row"><span class="k">Inner shadow</span><span class="v">#4A8470</span></div>
+        <div class="pull-row"><span class="k">Swirl</span><span class="v">#E89B3C</span></div>
+        <div class="pull-row"><span class="k">Swirl stroke</span><span class="v">5.5% / 56px</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ 02. VARIANTS ════════════════════════════════════ -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">02</span>
+    <span class="section-title">Variants</span>
+    <span class="section-rule"></span>
+    <span class="section-aside">Same composition, four contexts</span>
+  </div>
+
+  <div class="variants">
+
+    <div class="variant">
+      <div class="variant-tile v-primary">
+        <svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg>
+      </div>
+      <div class="variant-meta">
+        <div class="variant-name">Primary</div>
+        <div class="variant-desc">Saffron on Pine — store, marketing, default tile.</div>
+        <div class="variant-mono">PINE · LINEN · SAFFRON</div>
+      </div>
+    </div>
+
+    <div class="variant">
+      <div class="variant-tile v-dark">
+        <svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg>
+      </div>
+      <div class="variant-meta">
+        <div class="variant-name">Dark mode tile</div>
+        <div class="variant-desc">Charcoal background where Pine fights OS dark themes.</div>
+        <div class="variant-mono">CHARCOAL · LINEN · DARK SAFFRON</div>
+      </div>
+    </div>
+
+    <div class="variant">
+      <div class="variant-tile v-mono-white">
+        <svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg>
+      </div>
+      <div class="variant-meta">
+        <div class="variant-name">Mono / white-on-Pine</div>
+        <div class="variant-desc">Press, watch glyphs, single-color print.</div>
+        <div class="variant-mono">PINE · LINEN</div>
+      </div>
+    </div>
+
+    <div class="variant">
+      <div class="variant-tile v-mono-pine">
+        <svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg>
+      </div>
+      <div class="variant-meta">
+        <div class="variant-name">Mono / Pine-on-white</div>
+        <div class="variant-desc">Favicon, light-background contexts, App Clip.</div>
+        <div class="variant-mono">LINEN · PINE</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ 03. PLATFORM MASKS ════════════════════════════════════ -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">03</span>
+    <span class="section-title">Platform masks</span>
+    <span class="section-rule"></span>
+    <span class="section-aside">~10% safe margin survives every shape</span>
+  </div>
+
+  <div class="masks">
+
+    <div class="mask-cell">
+      <div class="mask-tile mask-ios v-primary">
+        <svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg>
+      </div>
+      <div class="mask-label">iOS · squircle</div>
+    </div>
+
+    <div class="mask-cell">
+      <div class="mask-tile mask-androidsq v-primary">
+        <svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg>
+      </div>
+      <div class="mask-label">Android · rounded square</div>
+    </div>
+
+    <div class="mask-cell">
+      <div class="mask-tile mask-circle v-primary">
+        <svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg>
+      </div>
+      <div class="mask-label">Android · circle</div>
+    </div>
+
+    <div class="mask-cell">
+      <div class="mask-tile mask-square v-primary">
+        <svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg>
+      </div>
+      <div class="mask-label">Square · master</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ 04. CONSTRUCTION ════════════════════════════════════ -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">04</span>
+    <span class="section-title">Construction</span>
+    <span class="section-rule"></span>
+    <span class="section-aside">Geometry, ratios, spec</span>
+  </div>
+
+  <div class="construction">
+    <div class="grid-stage">
+      <div class="grid-tile v-primary">
+        <svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg>
+        <!-- Construction overlay -->
+        <svg class="grid-overlay" viewBox="0 0 1024 1024">
+          <!-- 10% safe margin -->
+          <rect x="102" y="102" width="820" height="820" fill="none" stroke="rgba(232,155,60,0.35)" stroke-width="2" stroke-dasharray="6 6"/>
+          <!-- Center cross -->
+          <line x1="512" y1="0" x2="512" y2="1024" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+          <line x1="0" y1="512" x2="1024" y2="512" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+          <!-- Bowl rim guideline (y=560) -->
+          <line x1="60" y1="560" x2="964" y2="560" stroke="rgba(232,155,60,0.4)" stroke-width="1" stroke-dasharray="4 4"/>
+          <!-- Bowl bottom guideline (y=746 ≈ 73%) -->
+          <line x1="60" y1="744" x2="964" y2="744" stroke="rgba(232,155,60,0.4)" stroke-width="1" stroke-dasharray="4 4"/>
+          <!-- Width markers -->
+          <line x1="222" y1="780" x2="802" y2="780" stroke="rgba(232,155,60,0.55)" stroke-width="2"/>
+          <line x1="222" y1="772" x2="222" y2="788" stroke="rgba(232,155,60,0.55)" stroke-width="2"/>
+          <line x1="802" y1="772" x2="802" y2="788" stroke="rgba(232,155,60,0.55)" stroke-width="2"/>
+          <text x="512" y="810" fill="#E89B3C" font-family="JetBrains Mono, monospace" font-size="22" text-anchor="middle">580 · 56% width</text>
+          <!-- Swirl height marker -->
+          <line x1="60" y1="40" x2="60" y2="504" stroke="rgba(232,155,60,0.55)" stroke-width="2"/>
+          <line x1="52" y1="40" x2="68" y2="40" stroke="rgba(232,155,60,0.55)" stroke-width="2"/>
+          <line x1="52" y1="504" x2="68" y2="504" stroke="rgba(232,155,60,0.55)" stroke-width="2"/>
+          <text x="78" y="280" fill="#E89B3C" font-family="JetBrains Mono, monospace" font-size="22">swirl</text>
+          <!-- Margin label -->
+          <text x="512" y="80" fill="rgba(255,255,255,0.5)" font-family="JetBrains Mono, monospace" font-size="18" text-anchor="middle">10% safe area</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="anno-list anno">
+      <div class="anno-item">
+        <b>Canvas</b>
+        1024 × 1024 master, square, no transparency. Every export rasters from this single SVG.
+      </div>
+      <div class="anno-item">
+        <b>Safe area</b>
+        10% margin on all four sides (102px). Bowl + swirl never touch this boundary, so iOS, Android, circle, and square masks all crop cleanly.
+      </div>
+      <div class="anno-item">
+        <b>Bowl proportions</b>
+        Width 580px (56% of canvas). Rim sits at y=560 (~55% down); bottom curve at y=744 (~73%). Centered horizontally on x=512.
+      </div>
+      <div class="anno-item">
+        <b>Bowl construction</b>
+        Linen body, single closed path. Rim opening is a Pine-Light ellipse (rx=278, ry=34) — the only depth cue. No highlights, no gradients, no skeuomorphic rims.
+      </div>
+      <div class="anno-item">
+        <b>Steam swirl</b>
+        Single continuous saffron stroke. Width 56px (5.5% of canvas), round caps, round joins. Two loose S-turns rising from y=504 to y=40. Hand-confident, never wobbly.
+      </div>
+      <div class="anno-item">
+        <b>Color discipline</b>
+        Three fills total — Pine, Linen, Saffron — plus Pine-Light for inner shadow. No gradients, no noise, no shadow under the icon.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ 05. HOME SCREEN TEST ════════════════════════════════════ -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">05</span>
+    <span class="section-title">The stranger test</span>
+    <span class="section-rule"></span>
+    <span class="section-aside">Icon at home-screen size · 60×60 px</span>
+  </div>
+
+  <div class="home-row">
+
+    <!-- Phone A — dark wallpaper -->
+    <div>
+      <div class="phone">
+        <div class="phone-screen phone-bg-a">
+          <div class="phone-island"></div>
+          <div class="phone-status">
+            <span>9:41</span>
+            <span style="display:inline-flex;gap:4px;align-items:center;">
+              <svg width="14" height="10" viewBox="0 0 14 10"><rect x="0" y="6" width="2.5" height="4" rx="0.5" fill="#fff"/><rect x="3.7" y="4" width="2.5" height="6" rx="0.5" fill="#fff"/><rect x="7.4" y="2" width="2.5" height="8" rx="0.5" fill="#fff"/><rect x="11.1" y="0" width="2.5" height="10" rx="0.5" fill="#fff"/></svg>
+              <svg width="20" height="10" viewBox="0 0 20 10"><rect x="0" y="0" width="17" height="9" rx="2" fill="none" stroke="#fff" stroke-opacity="0.5"/><rect x="1.5" y="1.5" width="14" height="6" rx="1" fill="#fff"/></svg>
+            </span>
+          </div>
+          <div class="phone-grid">
+            <div class="home-icon"><div class="tile" style="background:#1d1d1f"></div><span class="name">Phone</span></div>
+            <div class="home-icon"><div class="tile" style="background:#1976d2"></div><span class="name">Messages</span></div>
+            <div class="home-icon"><div class="tile" style="background:#3a3a3c"></div><span class="name">Settings</span></div>
+            <div class="home-icon"><div class="tile" style="background:#fff"></div><span class="name">Calendar</span></div>
+
+            <div class="home-icon"><div class="tile" style="background:#0a84ff"></div><span class="name">Maps</span></div>
+            <div class="home-icon"><div class="tile" style="background:#e0e0e0"></div><span class="name">Photos</span></div>
+            <div class="home-icon">
+              <div class="tile v-primary"><svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg></div>
+              <span class="name" style="color:#fff;font-weight:600;">Cookable</span>
+            </div>
+            <div class="home-icon"><div class="tile" style="background:#34c759"></div><span class="name">Health</span></div>
+
+            <div class="home-icon"><div class="tile" style="background:#000"></div><span class="name">Spotify</span></div>
+            <div class="home-icon"><div class="tile" style="background:#ff3b30"></div><span class="name">YouTube</span></div>
+            <div class="home-icon"><div class="tile" style="background:#5856d6"></div><span class="name">Notes</span></div>
+            <div class="home-icon"><div class="tile" style="background:#ff9500"></div><span class="name">Weather</span></div>
+          </div>
+          <div class="phone-dock">
+            <div class="dock-icon"></div><div class="dock-icon"></div>
+            <div class="dock-icon"></div><div class="dock-icon"></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-cap">Dark wallpaper · <em>Cookable, row 2</em></div>
+    </div>
+
+    <!-- Phone B — warm wallpaper -->
+    <div>
+      <div class="phone">
+        <div class="phone-screen phone-bg-b">
+          <div class="phone-island"></div>
+          <div class="phone-status" style="color:#1A2421;">
+            <span>9:41</span>
+            <span style="display:inline-flex;gap:4px;align-items:center;">
+              <svg width="14" height="10" viewBox="0 0 14 10"><rect x="0" y="6" width="2.5" height="4" rx="0.5" fill="#1A2421"/><rect x="3.7" y="4" width="2.5" height="6" rx="0.5" fill="#1A2421"/><rect x="7.4" y="2" width="2.5" height="8" rx="0.5" fill="#1A2421"/><rect x="11.1" y="0" width="2.5" height="10" rx="0.5" fill="#1A2421"/></svg>
+              <svg width="20" height="10" viewBox="0 0 20 10"><rect x="0" y="0" width="17" height="9" rx="2" fill="none" stroke="#1A2421" stroke-opacity="0.5"/><rect x="1.5" y="1.5" width="14" height="6" rx="1" fill="#1A2421"/></svg>
+            </span>
+          </div>
+          <div class="phone-grid">
+            <div class="home-icon">
+              <div class="tile v-primary"><svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg></div>
+              <span class="name" style="color:#1A2421;font-weight:600;">Cookable</span>
+            </div>
+            <div class="home-icon"><div class="tile" style="background:#fff"></div><span class="name" style="color:#1A2421">Mail</span></div>
+            <div class="home-icon"><div class="tile" style="background:#34c759"></div><span class="name" style="color:#1A2421">WhatsApp</span></div>
+            <div class="home-icon"><div class="tile" style="background:#ff2d55"></div><span class="name" style="color:#1A2421">Music</span></div>
+
+            <div class="home-icon"><div class="tile" style="background:#000"></div><span class="name" style="color:#1A2421">X</span></div>
+            <div class="home-icon"><div class="tile" style="background:#0a84ff"></div><span class="name" style="color:#1A2421">FB</span></div>
+            <div class="home-icon"><div class="tile" style="background:#3a3a3c"></div><span class="name" style="color:#1A2421">Camera</span></div>
+            <div class="home-icon"><div class="tile" style="background:#ff9500"></div><span class="name" style="color:#1A2421">Reminders</span></div>
+
+            <div class="home-icon"><div class="tile" style="background:#bf5af2"></div><span class="name" style="color:#1A2421">Books</span></div>
+            <div class="home-icon"><div class="tile" style="background:#fff"></div><span class="name" style="color:#1A2421">Files</span></div>
+            <div class="home-icon"><div class="tile" style="background:#34c759"></div><span class="name" style="color:#1A2421">Notes</span></div>
+            <div class="home-icon"><div class="tile" style="background:#5ac8fa"></div><span class="name" style="color:#1A2421">Find My</span></div>
+          </div>
+          <div class="phone-dock" style="background:rgba(255,255,255,0.4);">
+            <div class="dock-icon" style="background:rgba(255,255,255,0.6);"></div>
+            <div class="dock-icon" style="background:rgba(255,255,255,0.6);"></div>
+            <div class="dock-icon" style="background:rgba(255,255,255,0.6);"></div>
+            <div class="dock-icon" style="background:rgba(255,255,255,0.6);"></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-cap">Warm wallpaper · <em>Cookable, top-left</em></div>
+    </div>
+
+    <!-- Phone C — light wallpaper, dark mode tile -->
+    <div>
+      <div class="phone">
+        <div class="phone-screen phone-bg-c">
+          <div class="phone-island"></div>
+          <div class="phone-status" style="color:#1A2421;">
+            <span>9:41</span>
+            <span style="display:inline-flex;gap:4px;align-items:center;">
+              <svg width="14" height="10" viewBox="0 0 14 10"><rect x="0" y="6" width="2.5" height="4" rx="0.5" fill="#1A2421"/><rect x="3.7" y="4" width="2.5" height="6" rx="0.5" fill="#1A2421"/><rect x="7.4" y="2" width="2.5" height="8" rx="0.5" fill="#1A2421"/><rect x="11.1" y="0" width="2.5" height="10" rx="0.5" fill="#1A2421"/></svg>
+              <svg width="20" height="10" viewBox="0 0 20 10"><rect x="0" y="0" width="17" height="9" rx="2" fill="none" stroke="#1A2421" stroke-opacity="0.5"/><rect x="1.5" y="1.5" width="14" height="6" rx="1" fill="#1A2421"/></svg>
+            </span>
+          </div>
+          <div class="phone-grid">
+            <div class="home-icon"><div class="tile" style="background:#000"></div><span class="name" style="color:#1A2421">Things</span></div>
+            <div class="home-icon"><div class="tile" style="background:#1d1d1f"></div><span class="name" style="color:#1A2421">Bear</span></div>
+            <div class="home-icon"><div class="tile" style="background:#222"></div><span class="name" style="color:#1A2421">Notion</span></div>
+            <div class="home-icon"><div class="tile" style="background:#ff453a"></div><span class="name" style="color:#1A2421">Strava</span></div>
+
+            <div class="home-icon"><div class="tile" style="background:#0a84ff"></div><span class="name" style="color:#1A2421">Linear</span></div>
+            <div class="home-icon"><div class="tile" style="background:#fff;border:1px solid #e6e6e6;"></div><span class="name" style="color:#1A2421">Apollo</span></div>
+            <div class="home-icon"><div class="tile" style="background:#000"></div><span class="name" style="color:#1A2421">Threads</span></div>
+            <div class="home-icon">
+              <div class="tile v-dark"><svg class="ic" viewBox="0 0 1024 1024"><use href="#cookable-master"/></svg></div>
+              <span class="name" style="color:#1A2421;font-weight:600;">Cookable</span>
+            </div>
+
+            <div class="home-icon"><div class="tile" style="background:#34c759"></div><span class="name" style="color:#1A2421">Halide</span></div>
+            <div class="home-icon"><div class="tile" style="background:#1a1a1a"></div><span class="name" style="color:#1A2421">Arc</span></div>
+            <div class="home-icon"><div class="tile" style="background:#ff9500"></div><span class="name" style="color:#1A2421">Overcast</span></div>
+            <div class="home-icon"><div class="tile" style="background:#9b51e0"></div><span class="name" style="color:#1A2421">Figma</span></div>
+          </div>
+          <div class="phone-dock" style="background:rgba(0,0,0,0.06);">
+            <div class="dock-icon" style="background:rgba(0,0,0,0.08);"></div>
+            <div class="dock-icon" style="background:rgba(0,0,0,0.08);"></div>
+            <div class="dock-icon" style="background:rgba(0,0,0,0.08);"></div>
+            <div class="dock-icon" style="background:rgba(0,0,0,0.08);"></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-cap">Light wallpaper · <em>Dark variant, row 2</em></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ 06. COLOR TOKENS ════════════════════════════════════ -->
+<div class="section">
+  <div class="section-head">
+    <span class="section-num">06</span>
+    <span class="section-title">Color tokens</span>
+    <span class="section-rule"></span>
+    <span class="section-aside">From brand system, locked</span>
+  </div>
+
+  <div class="tokens">
+    <div class="token">
+      <div class="swatch" style="background:#2D5F4E;"></div>
+      <div>
+        <div class="tk-name">Forest Pine</div>
+        <div class="tk-hex">#2D5F4E</div>
+        <div class="tk-role">Primary background</div>
+      </div>
+    </div>
+    <div class="token">
+      <div class="swatch" style="background:#4A8470;"></div>
+      <div>
+        <div class="tk-name">Pine Light</div>
+        <div class="tk-hex">#4A8470</div>
+        <div class="tk-role">Bowl interior depth</div>
+      </div>
+    </div>
+    <div class="token">
+      <div class="swatch" style="background:#FAF7F2;border:1px solid var(--stone-border);"></div>
+      <div>
+        <div class="tk-name">Linen</div>
+        <div class="tk-hex">#FAF7F2</div>
+        <div class="tk-role">Bowl body</div>
+      </div>
+    </div>
+    <div class="token">
+      <div class="swatch" style="background:#E89B3C;"></div>
+      <div>
+        <div class="tk-name">Saffron</div>
+        <div class="tk-hex">#E89B3C</div>
+        <div class="tk-role">Steam swirl — only accent</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════ FOOTER ════════════════════════════════════ -->
+<div class="footer">
+  <span>Cookable · App Icon System v1</span>
+  <span>SVG master at <span class="mono" style="color:var(--charcoal)">#cookable-master</span></span>
+  <span>Cook anything. Waste nothing.</span>
+</div>
+
+</body>
+</html>

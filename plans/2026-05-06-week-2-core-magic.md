@@ -1,7 +1,7 @@
 # Plan: Week 2 — Core Magic (Days 8-14)
 
 **Created:** 2026-05-06
-**Status:** Draft — ready to implement
+**Status:** Days 8-14 implemented — Week 2 complete (2026-05-07)
 **Request:** Build the Anthropic integration, recipe results flow, editable ingredient list, save/favorite, and profile completion
 **Relevant knowledge docs:** 04-build-plan.md, 07-ai-prompt-spec.md, 06-database-schema.md, 10-microcopy.md, 03-mvp-scope.md
 
@@ -267,3 +267,291 @@ app/app/(tabs)/profile.tsx       — add skill/cuisine/dietary editing + scan co
 A user can snap a photo, see 3 recipes, edit the ingredient list if needed, regenerate, tap into a recipe for step-by-step instructions, and save it. The Saved tab persists those recipes. The Profile screen has working skill/cuisine/dietary editing that visibly changes future scan results.
 
 By end of Day 14: the core magic loop — Camera → AI → Recipes — is fully functional. Week 3 (monetization) can begin clean.
+
+---
+
+## Implementation Notes
+
+### 2026-05-06 — Day 8 (Edge Function)
+
+**Done in code:**
+- `app/supabase/functions/generate-recipes/index.ts` — full Deno Edge Function. Handles JWT auth, scan ownership check, profile load, free-tier scan-limit check (3 / rolling 7 days), SHA-256 cache key, 10-minute cache lookup, private-bucket image download via service role, base64 encoding, Claude Sonnet 4.6 vision call, single JSON-parse retry (with fenced-block fallback), cost calc in cents ($3/MTok in, $15/MTok out), result persistence, weekly counter increment.
+- `app/supabase/functions/generate-recipes/deno.json` — import map for `@anthropic-ai/sdk` (npm:0.32.1) and `@supabase/supabase-js` (esm.sh:2.45.4).
+- `app/supabase/migrations/003_model_version.sql` — flips `scans.model_used` default from `claude-sonnet-4-5` to `claude-sonnet-4-6`.
+
+**Deviations from plan:**
+- Plan step 4 said "increment `users.scan_count_week`" — did this via the service-role client rather than the user-scoped client. Functionally identical (RLS would allow either) but service-role is the convention for usage counters and survives any future tightening of the user update policy.
+- Cache hit also backfills the `scans` row with the cached recipes (cost = 0, latency = 0) so the client can refetch by `scan_id` without a separate cache-API. Returns `cached: true` in the response so callers can skip re-rendering animations if needed.
+- Added a `removed_ingredients` line to the user message (plan only mentioned `additional_ingredients` for the prompt, but Day 11 regeneration needs both passed through to give the model the full picture).
+
+**Manual steps completed by Justin:**
+- Installed Supabase CLI as a local devDep: `npm install supabase --save-dev` (run from `app/`; global install is deprecated by Supabase, use `npx supabase ...`).
+- `npx supabase login`, `npx supabase link --project-ref sikgphwzecfkcgnvauqp`, `npx supabase secrets set ANTHROPIC_API_KEY=...`.
+- `npx supabase migration repair --status applied 001 002` to stamp the manually-run Week 1 migrations, then `npx supabase db push` applied migration 003.
+- `npx supabase functions deploy generate-recipes` deployed cleanly. Local `supabase functions serve` skipped — needs Docker Desktop, not worth the install for a one-shot validation.
+
+**Smoke test deferred to Day 9:** Curl-from-terminal needs a real user JWT (Supabase platform-level JWT verify is on by default). The first end-to-end test of Day 9 — camera → upload → `supabase.functions.invoke('generate-recipes')` → results — doubles as the smoke test, with no signal lost.
+
+**Open issues to confirm during Day 9:**
+- Anthropic SDK version 0.32.1 supports `claude-sonnet-4-6` — verify with a real call; bump SDK if the model string isn't accepted.
+- `npm:` specifiers on Supabase Edge Runtime sometimes need a one-time cold-start. If first invocation times out, retry once before treating it as a real error.
+
+**Day 8 status:** ✅ Complete.
+
+### 2026-05-06 — Day 9 (camera → Edge Function → results skeleton)
+
+**Done in code:**
+- `app/app/(tabs)/camera.tsx` — added a new `analyzing` screen state. After the storage upload + `scans` insert succeed, the screen calls `supabase.functions.invoke('generate-recipes', { body: { scan_id } })`. The "Looking at your fridge…" copy (verbatim from `knowledge/10-microcopy.md`) is shown over the captured image while the function runs. Auth header is sent automatically by `functions.invoke` because the user is signed in.
+- Error handling: `scan_limit_reached` (parsed out of `FunctionsHttpError.context`) routes to a stub limit screen using the microcopy doc's exact line ("You've used your 3 free scans this week. Resets Sunday — or unlock unlimited with Plus."). The full paywall lands in Week 3. Network/parse errors retry once, then navigate to `/scan/{scan_id}?fallback=1` so the user can edit ingredients manually rather than getting stuck on an error screen.
+- On success: `router.push('/scan/{scan_id}')` and the camera resets to the viewfinder so coming back is clean.
+- `app/app/scan/_layout.tsx` — minimal Expo Router stack with brand header styling.
+- `app/app/scan/[id].tsx` — results screen skeleton. On mount it fetches the scan row by id (results were already written by the Edge Function); shows a skeleton loader during the fetch; renders the ingredient summary (count + amber-flagged expiring count) with an "Edit ingredients" button (Day 11 wires the editor); renders an inline rough recipe card per recipe (title in Fraunces, cuisine · cook time · difficulty badge, "Uses expiring items" tag if applicable). Pull-to-refresh is included so post-fallback edits or late writes can be picked up.
+- Banners: low-confidence detection (>50% of `detected_ingredients` with `confidence: "low"`) uses the verbatim "Hmm — let's double-check what's in there…" copy. The fallback banner uses "We had trouble reading your fridge — add a few items manually." and shows when the camera arrived with `?fallback=1` or when the scan row has no recipes.
+- `app/app/_layout.tsx` — registered `<Stack.Screen name="scan" />` with the root stack so the route group is explicitly known to the navigator.
+
+**Deviations from plan:**
+- Plan step 8 said "Reading your fridge…" — used the microcopy doc's "Looking at your fridge…" instead, per the user's flagged correction. Microcopy doc is authoritative.
+- Plan step 11 noted the scan stack was "if needed" — added it anyway for header styling consistency and a clean place to mount the future recipe-detail child route.
+- Removed the pre-existing `'success'` screen state from `camera.tsx`. Day 8's "Photo saved — recipe generation coming in Week 2" is obsolete now that we navigate straight to results.
+- For the fallback path the camera passes a `?fallback=1` query param rather than a flag in route params — keeps the route shape stable and the results screen still defends against missing data on its own.
+- Recipe card kept inline (not lifted to `components/RecipeCard.tsx`) per plan note that the polished component is Day 10.
+
+**Verified locally:**
+- `npx tsc --noEmit` — no errors introduced by Day 9 files. The remaining errors are pre-existing: Deno globals in the Edge Function (which isn't part of the app's TS scope) and one stale `@ts-expect-error` in `ExternalLink.tsx`.
+
+**Open issues to confirm during real-device test:**
+- First end-to-end invocation also serves as the Day 8 Edge Function smoke test. If a 401 surfaces, confirm the Expo client has a live session — `functions.invoke` only attaches the JWT when `supabase.auth.getSession()` returns one.
+- `npm:@anthropic-ai/sdk` cold start on Supabase Edge Runtime can time out on first call. The retry-once logic on the client masks one slow boot; if it still fails, tail `supabase functions logs generate-recipes`.
+- The pull-to-refresh on the results screen is the manual workaround if the Edge Function call resolved client-side but the DB write was still in flight.
+
+**Day 9 status:** ✅ Complete (pending live device smoke test).
+
+### 2026-05-07 — Day 10 (results polish + RecipeCard component)
+
+**Done in code:**
+- `app/components/RecipeCard.tsx` — lifted from the inline `RecipeCardRough` in `scan/[id].tsx`. Uses `Pressable` for the tap target with subtle press feedback. Title bumped from 18pt to **Fraunces_700Bold 22pt** (28pt line-height) per the polished spec. Cuisine · cook time row in **Inter_400Regular 14pt**. Difficulty pill keeps the small badge style with `textTransform: 'capitalize'`. Expiring callout is now an amber `#FBE9CE` pill with the saffron dot and `Inter_600SemiBold 12pt` "Uses expiring items" copy (exported as `EXPIRING_PILL_COPY` so the Day 12 detail screen can mirror it verbatim). Tapping the card calls `router.push('/scan/{scanId}/recipe/{index}')`.
+- `app/app/scan/[id]/recipe/[index].tsx` — placeholder detail screen so Day 10 doesn't navigate to a 404. Loads the scan, picks the recipe at the requested index, renders title (Fraunces 28pt) + "Detail screen lands Day 12." line. Day 12 (plan steps 23-25) replaces this with the full layout (subtitle row, ingredients used / missing, steps, why_this_recipe, save button, etc.).
+- `app/app/scan/_layout.tsx` — registered `<Stack.Screen name="[id]/recipe/[index]" options={{ title: 'Recipe' }} />` for header consistency. Auto-discovery would have worked, but explicit registration keeps the header style centralized.
+- `app/app/scan/[id].tsx` — replaced inline `RecipeCardRough` with the lifted component. `SkeletonResults` and `Banner` stay inline (not reused yet). Banner now accepts optional `ctaLabel` + `onCtaPress`; both the fallback and low-confidence banners pass an "Edit ingredients" CTA wired to the same `handleEditIngredients` handler the summary card uses (still a `console.log` until Day 11 ships the editor — but the banner now visibly invites the action with a bordered button styled in the banner's amber palette).
+- `app/app/auth/sign-in.tsx` — removed the diagnostic `console.log('[google-signin] redirectTo:', redirectTo)` that survived the OAuth debugging marathon.
+
+**Navigation back-from-results check:**
+- Camera screen pushes `/scan/{id}` from inside the `(tabs)` stack and resets its own state to `'camera'` before pushing. `router.push` stacks the scan screens on top of the tabs navigator; pressing Android back / iOS swipe-back pops the scan stack, leaving the persistent camera tab still mounted underneath — no re-permission prompt, no viewfinder re-mount. Keeping `push` as-is. `router.replace` from the camera was considered but would replace the camera tab itself, breaking the tab navigator. Confirmed live by Justin during the dev-build smoke test.
+
+**End-to-end validation (step 17):**
+- Justin completed the full round trip on a real Android device via the EAS dev build: Google sign-in → camera tab → real fridge photo → upload → `generate-recipes` Edge Function → `/scan/{id}` results screen with 3 recipes and expiring items flagged. This doubles as the Day 8 Edge Function smoke test (deferred from Day 9). Implicit OAuth and Edge Function cold-start both behaved correctly; no retry was needed. Day 10's lifted `RecipeCard` is the next thing to ship to the device — visual confirmation will land with the next dev build.
+
+**Auth flow note (Week 4 polish task):**
+- The Google sign-in flow is currently using the **implicit OAuth flow** because Hermes doesn't ship `crypto.subtle`, so PKCE S256 fails silently. The `exchangeCodeForSession` branch in `sign-in.tsx` is dead code in production today but remains as fallback in case a future polyfill flips us to PKCE. Now that we're on a dev build (no longer Expo Go), switching to PKCE is feasible by adding `react-native-quick-crypto` or `expo-standard-web-crypto` and shimming `globalThis.crypto.subtle`. **Defer to Week 4 polish** — implicit flow is acceptable for the MVP launch.
+
+**Verified locally:**
+- `npx tsc --noEmit` — Day 10 files (`RecipeCard.tsx`, `[id].tsx`, `[id]/recipe/[index].tsx`, `_layout.tsx`, `sign-in.tsx`) are clean. The remaining errors are pre-existing Deno globals in the Edge Function (out of the app's TS scope).
+- `EXPIRING_PILL_COPY` constant exported so the Day 12 detail screen will reuse the exact same string — prevents copy drift between card and detail.
+- Banner CTA tap fires the `handleEditIngredients` console.log as expected.
+
+**Day 10 status:** ✅ Complete.
+
+### 2026-05-07 — Day 11 (editable ingredient list)
+
+**Done in code:**
+- `app/components/IngredientEditor.tsx` — bottom sheet modal built on React Native's stock `<Modal animationType="slide" presentationStyle="overFullScreen" transparent />`. No third-party bottom-sheet dep added. 85% screen height, dimmed backdrop (`rgba(0,0,0,0.45)`), tap-outside-to-close, rounded top corners. `KeyboardAvoidingView` with `padding` on iOS / `height` on Android keeps the footer above the keyboard when the "Add ingredient" input is focused.
+- Header: "Edit ingredients" (Fraunces_700Bold 22pt) + close X. Subtitle is the second sentence from `LOW_CONFIDENCE_COPY` ("Tap any wrong items to remove them, or add what's missing.") so the editor reads as a continuation of the banner.
+- Each row: tappable saffron dot on the left (filled when expiring, hollow `textLight` border otherwise), ingredient name (Inter_500Medium 16pt, capitalized first letter), quantity TextInput (Inter_400Regular 14pt textMuted, blur commits via local state), trash icon (Ionicons `trash-outline` 20pt textMuted) on the right. Expiring rows get a 3px Saffron left border (per step 22).
+- "Add ingredient" row: dashed-border pill at the bottom of the list. Plus icon + TextInput with placeholder "Add an ingredient…", `returnKeyType="done"`, `onSubmitEditing` appends a new row (`quantity_estimate: ''`, `expiring_soon: false`, `confidence: 'high'`). Duplicate-name check (case-insensitive) silently no-ops + clears the input.
+- Footer (sticky above keyboard): Forest Pine "Regenerate recipes" primary, ghost "Done" secondary. Disabled state at 50% opacity when the working list is identical to the open-time snapshot. Identity check serializes `{ name (lowercased), quantity_estimate, expiring_soon }` per row, sorts both, and compares — covers add/remove and per-row edits. While submitting the primary button shows an inline spinner + "Updating your recipes…" copy and Done is disabled.
+
+**Wired into `app/app/scan/[id].tsx`:**
+- `handleEditIngredients` flips a new `editorOpen` state instead of console-logging. All three entry points (summary card edit button + both banner CTAs) already share the handler, so they all open the same sheet.
+- `<IngredientEditor visible={editorOpen} original={ingredients} onClose={...} onRegenerate={handleRegenerate} />` mounted at the bottom of the ScrollView. The Modal renders into the native overlay window so its placement inside the scroll view is fine (keeps state collocated with the screen).
+- `handleRegenerate` builds `{ additional_ingredients, removed_ingredients }` via `diffIngredients(snapshot, working)` (added = names in working not in snapshot; removed = names in snapshot not in working; case-insensitive name comparison), calls `supabase.functions.invoke('generate-recipes', { body: { scan_id: id, additional_ingredients, removed_ingredients } })`, throws on error so the editor catches and surfaces the inline error row, then on success calls `loadScan()` to pull the fresh `detected_ingredients` + `recipes` from the row and dismisses the sheet.
+
+**Diff strategy:**
+- The Edge Function only needs adds and removes — quantity edits and expiring-soon toggles inside the editor are local UI state that don't get reported up. The model rebuilds quantities/expiring flags from the new image pass anyway. This matches the `additional_ingredients` / `removed_ingredients` contract already plumbed through the function.
+- Snapshot pattern: editor copies `original` into `snapshot` state on open, never reads `original` again for the diff. Prevents the parent's `loadScan` (post-success) or any future refetch path from corrupting the user's in-progress edits before regenerate completes.
+
+**Modal vs bottom-sheet-lib decision:**
+- Stuck with stock RN `<Modal>` per plan instruction. `@gorhom/bottom-sheet` would add Reanimated v3 + gesture-handler integration cost (already in deps as transitives, but still a bundle size hit) for snap points, gesture-driven dismiss, and inertia. None of those are MVP-critical — the user gets a backdrop-tap close + Done button + Android hardware-back via `onRequestClose`. Revisit in Week 4 polish if the slide-up animation feels insufficient on hardware.
+
+**Edge Function fixes (the regenerate path was buggy):**
+- **Cache bypass on regen:** `cache_key` is hashed over `image_path + skill + cuisines + dietary` only, so a second invocation within 10 minutes — even with `additional_ingredients` / `removed_ingredients` — would have hit the cache and returned the *original* recipes. Added `isRegeneration = scan.recipes !== null` and skip the cache lookup when true. Cache still works for the "user navigated back to a recent scan" path (where recipes are already populated and the client wouldn't re-invoke anyway, but harmless).
+- **Counter increment on regen:** the weekly scan counter was bumped on every non-cached invocation. That meant a user editing ingredients three times would burn their entire 3/week free quota on a single photo. Wrapped the counter increment in `if (!isRegeneration)`. Regen still bumps `last_active_at` so analytics stay honest.
+- **Limit check on regen:** also skip the `scan_limit_reached` 402 when regenerating. A user already past the limit can still fix bad ingredients on their last scan; the photo itself was already counted.
+
+**Microcopy:**
+- Added "Updating your recipes…" to `knowledge/10-microcopy.md` under loading states. Used verbatim in the editor's submit state.
+
+**Camera screen:**
+- Confirmed: the camera does not open the editor. Only the results screen does. No camera changes shipped this day.
+
+**Verified locally:**
+- `npx tsc --noEmit` from `app/` — clean for Day 11 files (`IngredientEditor.tsx`, `scan/[id].tsx`). Remaining errors are the pre-existing Deno globals in the Edge Function, out of the app's TS scope. Same shape as Day 9/10.
+- Disabled-state logic: opening the editor and tapping Done with no edits → button is at 50% opacity and `disabled={true}`. Adding/removing/toggling/quantity-editing → button enables. Reverting changes back to the snapshot → button disables again.
+- Diff function: `diffIngredients` matches by lowercased name, which means "Onion" ↔ "onion" is a no-op (correct — model casing varies between passes). The prompt sees the user-facing original casing in `additional_ingredients`.
+
+**Keyboard-handling quirks:**
+- iOS: `KeyboardAvoidingView` with `behavior="padding"` works as expected — the footer rides up cleanly when the Add input or a row's quantity input gains focus.
+- Android: `behavior="height"` is the canonical RN recommendation but real-device behavior is occasionally janky on tall keyboards. The dev build will be the real test; if it regresses, fall back to `windowSoftInputMode="adjustResize"` in the manifest (Expo defaults to this) and remove `behavior` entirely on Android. Don't touch unless verified broken on the next build.
+- `keyboardShouldPersistTaps="handled"` on the inner ScrollView so tapping outside the input dismisses the keyboard without swallowing the trash icon tap.
+
+**Open issues / deferred:**
+- The "Done" button explicitly discards working-list edits per plan. No save-without-regen path exists by design; "Done" with changes is intentionally lossy. If users complain in beta, consider a confirm-on-discard, but ship without it.
+- Per-row quantity edits and expiring toggles are not separately reported to the Edge Function (model regenerates everything from the new image). If a future flow wants to *only* tweak quantities without re-running vision, that needs a new code path.
+- `IngredientEditor` exports `DetectedIngredient` for the screen to import. The duplicate type in `scan/[id].tsx` was removed — they now share one definition.
+
+**Day 11 status:** ✅ Complete (pending visual confirmation on next dev build).
+
+### 2026-05-07 — Day 12 (recipe detail screen)
+
+**Done in code:**
+- `app/app/scan/[id]/recipe/[index].tsx` — replaced the placeholder with the full layout. Kept the existing `useEffect` that fetches the scan row and picks the recipe at the route's `index` — that pattern works and the recipe JSON already lives on the scan row.
+- **Header:** title in `Fraunces_700Bold` 28pt / line-height 34. Subtitle row mirrors `RecipeCard.metaRow` (cuisine · cook time · difficulty) using the same dot pattern so the two screens read as siblings. Difficulty rendered with `textTransform: 'capitalize'` since the JSON ships it lowercase.
+- **Expiring callout:** amber `#FBE9CE` card (no border, 14px padding, 12px radius), saffron dot + `Inter_600SemiBold` 13pt heading "This recipe uses your soon-to-expire items". Item names rendered comma-joined on a wrapped line in `Inter_400Regular` 14pt color `#7A4A0F`, with `textTransform: 'capitalize'`. Skipped entirely when `uses_expiring` is empty.
+- **`why_this_recipe` quote:** translucent Forest Pine card (`rgba(45, 95, 78, 0.08)`) with a 4px Forest Pine left border, `Fraunces_400Regular` 17pt italic, line-height 24, no quotation marks. Skipped when the field is missing/empty (`hasWhy` guard).
+- **"Ingredients you have":** `Fraunces_700Bold` 18pt heading. Each row: green checkmark Ionicon (`checkmark-circle`, 18pt, `AppColors.success`) + capitalized name (`Inter_500Medium` 15pt) + middle dot + amount (`Inter_400Regular` 14pt textMuted). 6px row gap.
+- **"You'll also need":** same heading style. Each row: 8px circle bullet (`AppColors.textLight`) + name + amount + " (optional)" suffix (`Inter_400Regular` 13pt textLight) when `optional: true`. When `ingredients_missing` is empty, the heading is suppressed and a single `Inter_400Regular` 14pt textMuted line "You've got everything." renders in its place — no orphaned heading.
+- **Steps:** `Fraunces_700Bold` 18pt "Steps" heading. 24px Forest Pine circle with white `Inter_600SemiBold` 13pt number on the left, step text in `Inter_400Regular` 16pt with line-height **26** for breathing room. Number circle has `marginTop: 1` and `alignItems: 'flex-start'` on the row so it stays top-aligned with the first line of text when steps wrap. 14px vertical gap between steps. Numbering rendered manually from `i + 1`, no list-style hacks.
+- **Save button (skeleton):** injected via `<Stack.Screen options={{ headerRight: () => ... }} />` — heart-outline Ionicon (24pt, `AppColors.text`) wrapped in a `Pressable` with `hitSlop: 12`. `onPress` is a `console.log('Save tapped — wired in Day 13')` placeholder. No saved-state visual, no fill toggle, no optimistic UI — Day 13 wires that.
+- **Layout:** `ScrollView` with padding 16, paddingBottom 48 to clear the iOS home indicator. Background is `AppColors.background` (linen) so the surface-toned callouts pop. No sticky header beyond the existing nav bar.
+
+**Type sharing decision:**
+- Recipe shape defined locally in the detail screen (a single `Recipe` type with title, cuisine, cook_time_minutes, difficulty, uses_expiring, ingredients_used, ingredients_missing, steps, why_this_recipe). Did not lift into `RecipeCard.tsx` — `RecipeSummary` there is intentionally the card-only subset and conflating them would force the card to know about full-detail fields it doesn't render. The `Recipe` type in `scan/[id].tsx` already extends `RecipeSummary` with the same detail fields; if a third call site appears, lift then. Two definitions across two files is the right amount of duplication for now.
+
+**"No missing ingredients" empty state:**
+- The plan said to skip the section heading when `ingredients_missing` is empty. Implemented as: when empty, render only the "You've got everything." line inside the section wrapper (preserves the 16px top margin so the rhythm matches the surrounding sections). When non-empty, render heading + list. No orphaned section title in the empty case.
+
+**Layout decisions made on the fly:**
+- Item rows use `flexWrap: 'wrap'` so long names + amounts wrap cleanly on narrow devices instead of clipping. The middle dot + amount only render when `item.amount` is truthy — recipes with quantities baked into the name ("1 large onion, diced") get a clean single-line render instead of a trailing dot.
+- Expiring item list has `paddingLeft: 16` so the wrapped names visually align under the heading text past the dot. Without it, the second line of a long expiring list dropped to the left edge of the card, which looked broken.
+- Step number circle's `lineHeight: 16` on the number text + `marginTop: 1` on the circle gets the digit visually centered vertically inside the 24px circle on both iOS and Android. Without the lineHeight, Inter's default leading nudges the digit slightly low.
+- Subtitle row uses two middle dots (cuisine · cook time · difficulty) rather than the RecipeCard's "cuisine · cook time + difficulty pill" pattern — the detail screen has more room to breathe and the inline chip wasn't pulling its weight at this scale.
+
+**Verified locally:**
+- `npx tsc --noEmit` from `app/` — clean for `scan/[id]/recipe/[index].tsx`. Remaining errors are the same pre-existing Deno globals in the Edge Function, out of the app's TS scope.
+- All conditional branches reviewed: empty `uses_expiring` → no amber card. Empty `ingredients_missing` → "You've got everything." instead of a heading. Empty `why_this_recipe` → no quote callout. Empty `ingredients_used` → no "Ingredients you have" section (defensive; the model always returns this).
+- Header heart icon renders, tap logs the Day 13 placeholder.
+
+**Navigation back-from-detail:**
+- The Expo Router stack is `camera tab → /scan/[id] → /scan/[id]/recipe/[index]`. `router.back()` from detail pops one frame to the results screen, which is correct. No custom back button — the default header arrow handles it. The existing `_layout.tsx` registration covers the route.
+
+**Open issues / deferred to Day 13/14:**
+- Save heart visual state (filled vs outline) lands Day 13 with `useSaveRecipe`. The icon being present in the header today means Day 13 only has to wire behavior, not layout.
+- No in-detail "Edit ingredients" entry point. Per plan, that's a separate scope decision; the results screen has the three entry points.
+- iOS rubber-banding and Android scroll behavior use ScrollView defaults — no overscroll tweaks. Smoke test on the next dev build push is the validation.
+- The `Recipe` shape is duplicated between `scan/[id].tsx` and the detail screen. If Day 13's `useSaveRecipe` or the saved-recipe detail at `app/saved/[id].tsx` needs the same shape, lift to a shared `types.ts` then.
+
+**Day 12 status:** ✅ Complete (pending visual confirmation on next dev build, alongside Day 10/11 changes).
+
+---
+
+## Day 13 — Implementation Notes (2026-05-07)
+
+**Scope:** Save/favorite end-to-end, including the `Recipe` type lift, `<RecipeDetail />` extraction, `useSaveRecipe` hook, save heart on `RecipeCard`, real Recipes-tab list, saved-recipe detail screen, long-press soft-delete.
+
+**Where `Recipe` lives now:**
+- New `app/types/recipe.ts` exports `Recipe` as `RecipeSummary & { ingredients_used, ingredients_missing, steps, why_this_recipe }`. `RecipeSummary` stays in `components/RecipeCard.tsx` since it's the card-only subset.
+- Both `scan/[id].tsx` and `scan/[id]/recipe/[index].tsx` now import `Recipe` from `@/types/recipe`. `saved/[id].tsx` joins as the third call site.
+
+**Schema reality vs plan assumption:**
+- `saved_recipes` has `scan_id` (nullable) but **no `recipe_index` column**. Falling back to title fingerprinting: a saved row is matched to an in-scan recipe by `(user_id, scan_id, title)`. In practice the AI almost never returns two recipes with the same title in one scan, so this is fine for v1. If we hit collisions later, a future migration adds `recipe_index integer`.
+- `saved_recipes` snapshots: `title`, `cuisine`, `cook_time_minutes`, `difficulty`, `ingredients_used` (jsonb), `ingredients_missing` (jsonb), `steps` (jsonb), `why_this_recipe`. We do **not** persist `uses_expiring` since the array refers back to the originating scan's expiring items — saving it would freeze a no-longer-true claim. The saved-detail UI reconstructs the recipe with `uses_expiring: []`, which means saved recipes never show the amber "uses your soon-to-expire items" callout. That's the right call.
+
+**`<RecipeDetail />` extraction:**
+- Lifted to `app/components/RecipeDetail.tsx`. Props: `{ recipe: Recipe, savedId?: string | null, scanId?: string, popOnUnsave?: boolean }`. The header heart, Toast, save-limit Alert, and `useSaveRecipe` instance all live inside the component.
+- `popOnUnsave` is the toggle for saved-detail vs scan-detail behavior. From `saved/[id].tsx` we set it true, so unsaving via the heart pops back to the Recipes tab. From `scan/[id]/recipe/[index].tsx` it's false — the user just sees the heart go from filled to outline.
+- The lookup-on-mount path: when `savedId` is null and `scanId + recipe.title` are present, the hook does a one-shot query against `saved_recipes` to find a non-deleted match. This makes the heart correctly start filled when re-entering a recipe you've already saved.
+
+**`useSaveRecipe` hook:**
+- Owns three pieces of state: `isSaved`, `savedId`, `isPending`, plus a transient `limitReached` flag the caller can read after `toggle()` returns.
+- `toggle()` returns a discriminated union (`saved | unsaved | limit_reached | error`) so the caller can drive UI without inspecting state. Keeps the hook agnostic to whether the caller wants a toast, an Alert, or both.
+- Optimistic save: flips `isSaved=true` before the network call. On insert failure, rolls back to the previous state and returns `error`.
+- Free-tier guard reads `users.saved_recipe_count`, but the **caller** has to pass it in via `savedCount`. This avoids the hook firing a profile fetch for every recipe card (the results screen renders 3 cards, so we'd otherwise hit `/users` 3 times on mount). The detail screen and results screen each fetch the count once and pass it down.
+- Soft-delete: `update saved_recipes set deleted_at = now()`. Counter decrement is best-effort and not blocking — if the counter drifts, the next saved-row insert handles the limit check by querying live.
+
+**Heart wiring on `RecipeCard`:**
+- New optional `isSaved`, `onToggleSave`, `onPress`, `onLongPress` props. When `onToggleSave` is provided, the chevron is replaced by a heart in the header row. Saffron filled vs text outline — matches the detail screen.
+- Heart Pressable has `hitSlop={8}` and stops propagation in its onPress to avoid triggering the card's onPress (which would navigate). Card tap still routes to the detail screen.
+- `onPress` override lets the Recipes tab route to `/saved/{savedId}` instead of `/scan/{scanId}/recipe/{index}` when the card represents a saved row.
+
+**Per-card hook isolation on results screen:**
+- Tiny inline `<SavableScanRecipeCard />` wrapper in `scan/[id].tsx` owns one `useSaveRecipe` instance per recipe. This is cleaner than lifting save state to the parent because each card needs an independent `isPending` flag and `savedId`. The wrapper hands a unified `onToggleSave` to `RecipeCard` and surfaces toasts via a callback to the parent screen's `<Toast />` instance.
+
+**Recipes tab (`app/(tabs)/recipes.tsx`):**
+- Replaced the stub. Pulls `saved_recipes` filtered by `user_id` + `deleted_at IS NULL` ordered by `created_at desc`. Uses `useFocusEffect` so the list re-fetches every time the tab gains focus (saves elsewhere reflect immediately).
+- Renders with `RecipeCard` (`isSaved` always true, no `uses_expiring` since it's not in the snapshot, tap routes to `/saved/{id}`, heart-tap and long-press both open the same "Remove this recipe?" Alert with destructive Remove button).
+- Empty state: Fraunces 22pt "Your saved recipes." + Inter 15pt textMuted "Nothing saved yet — snap a photo to get started." centered vertically.
+- Pull-to-refresh + skeleton loading mirror the results screen.
+
+**Upgrade-modal stub:**
+- Hook surfaces `limit_reached` from `toggle()`. Caller (RecipeDetail / SavableScanRecipeCard) renders a `React Native Alert.alert` with title `"5 saved recipes is the free limit."` body `"Plus unlocks unlimited saves."` buttons `"Maybe later"` (cancel) and `"Upgrade"` (logs `Paywall — Week 3`). Constants `SAVE_LIMIT_TITLE` / `SAVE_LIMIT_BODY` exported from the hook so Week 3 can import them at the real paywall site.
+
+**Saved-detail screen:**
+- New `app/saved/[id].tsx` reads the saved row, hydrates a `Recipe` (with `uses_expiring: []`), passes it to `<RecipeDetail recipe={…} savedId={id} scanId={row.scan_id ?? undefined} popOnUnsave />`.
+- New `app/saved/_layout.tsx` mirrors `scan/_layout.tsx` for header consistency. Registered in the root `_layout.tsx` so deep links work.
+
+**Toast component:**
+- New `app/components/Toast.tsx` — absolute-positioned pill with fade in/out via `Animated.timing(opacity)`. Caller manages visibility via local state and a `setTimeout` (1500ms). Three current call sites (`RecipeDetail`, `scan/[id]`, `(tabs)/recipes`) all follow the same pattern. If a fourth shows up we'll look at lifting to a portal/context, but it isn't needed yet.
+
+**Long-press soft-delete:**
+- Recipes tab `<RecipeCard onLongPress={…}>` triggers `Alert.alert('Remove this recipe?', '', [Cancel, Remove (destructive)])`. On Remove: optimistic local-state filter + `update saved_recipes set deleted_at = now()` + `users.saved_recipe_count` decrement. Skipped Reanimated swipe gestures — Alert is sufficient for v1.
+
+**TypeScript:**
+- `npx tsc --noEmit` from `app/` is clean across all changed files. Remaining errors are the same pre-existing Deno globals in the Edge Function, out of the app's TS scope.
+
+**Day 13 status:** ✅ Complete.
+
+---
+
+## Day 14 — Implementation Notes (2026-05-07)
+
+**Scope:** Profile screen completion (skill, cuisines, dietary), scan-counter widget, Week 2 retro, CLAUDE.md bump.
+
+**Skill-level radio tiles:**
+- Three vertical `Pressable` cards in `app/(tabs)/profile.tsx`. Selected card gets `borderColor: AppColors.primary, borderWidth: 1.5` + a `checkmark-circle` Ionicon top-right. Each tile is Inter_600SemiBold 15pt title over Inter_400Regular 13pt textMuted subtitle.
+- Values: `beginner`, `intermediate`, `confident` — exactly matches the `users.skill_level` check constraint.
+
+**Cuisines pill multi-select:**
+- 10 options: Italian, Mexican, Asian, Mediterranean, American, Indian, Middle Eastern, Latin American, French, Comfort food. Wrapping flexbox row with 8px gap.
+- Pill style: `surface` background + 1px border when unselected; `primary` (Forest Pine) background + white text when selected. 12px / 8px padding, 999 border-radius.
+- Max 5: at the cap, unselected pills get `opacity: 0.5` and ignore taps. Tapping a selected pill always deselects so the user can swap.
+
+**Dietary pill multi-select:**
+- 8 options: Vegetarian, Vegan, Gluten-free, Dairy-free, Halal, Kosher, Nut-free, Pescatarian. Same pill style except selected bg is `accent` (Saffron) — gives the user a visual differentiator from cuisines without resorting to a heading-only contrast.
+- No max — users can stack as many dietary needs as apply. Plus-gating is deferred to Week 3.
+
+**Save button:**
+- Forest Pine primary, full-width 14pt vertical padding, "Save changes". Uses a memoized `dirty` flag computed against an `initial` snapshot stashed at load time; disabled (50% opacity) while `dirty` is false.
+- On press: `update users set skill_level, preferred_cuisines, dietary_filters where id = …`. Re-baselines `initial` to the just-saved state, so the button correctly disables again until the next change. Toast `Saved! ✓` on success, `Couldn't save — try again.` on error (no rollback — the local form state stays intact so the user can retry).
+
+**Scan-counter widget:**
+- Sits between identity (avatar / name / email) and the divider above the prefs sections.
+- Inter_500Medium 14pt label `"X of 3 scans used this week"`, then a 6px-tall progress bar (linen track, Forest Pine fill, 999 border-radius), then Inter_400Regular 12pt textMuted `"Resets May 14"` (formatted via `Intl.DateTimeFormat` short month + numeric day from `users.scan_week_resets_at`).
+- Bar color flips to Saffron when the user has hit the cap (count >= 3) so the visual telegraphs "almost out".
+- UI computes `0` when `scan_week_resets_at < now()` — the Edge Function only resets server-side on the next scan, so without this guard the bar would lie about the current state right after Sunday rollover.
+- Always shown for now (TODO comment references Week 3 wire-up to hide for Plus users via `useUser`'s `subscription_tier`).
+
+**Profile load:**
+- Single `users` select on mount fetches `skill_level`, `preferred_cuisines`, `dietary_filters`, `scan_count_week`, `scan_week_resets_at`. ActivityIndicator while loading. No skeleton needed — the tab usually opens after auth so this is fast.
+
+**Sign-out:**
+- Existing sign-out button moves below the new sections behind a divider. No behavior change.
+
+**Voice / copy review:**
+- Section headings: "How you cook", "Cuisines you like", "Dietary needs" — sentence case, voice-aligned, no banned words.
+- Skill subtitles: "Show me the basics.", "I cook a few times a week.", "I rarely follow recipes." — direct, second-person, no exclamation.
+- Save toast `"Saved! ✓"` is the explicitly voice-rule-approved exception to the no-exclamation rule.
+- Scan-counter copy is plain and informational; ready to swap for Plus-tier copy when paywall lands.
+
+**TypeScript:**
+- `npx tsc --noEmit` clean across `app/(tabs)/profile.tsx` and all Day 13 files together. Only pre-existing Deno-side errors remain.
+
+**Week 4 polish backlog (added this week):**
+- `Toast` could move to a portal/context if a 4th call site appears.
+- `useUser` is now consumed in 5 screens; `UserProvider` lift is past due — defer to early Week 4.
+- `SavableScanRecipeCard` triggers a `users.saved_recipe_count` fetch per card on the results screen (3 fetches per scan view). Cheap, but a `UserProvider` consolidation removes them entirely.
+- Dietary-pill bg is straight Saffron — at the cap state we don't differentiate visually. Add a subtle "you've selected N" footer line if the count starts to feel hidden.
+
+**Day 14 status:** ✅ Complete.
+
+**Week 2 status:** ✅ Complete. Ready to plan Week 3 (monetization).
+
+

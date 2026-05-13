@@ -18,11 +18,24 @@ import * as FileSystem from 'expo-file-system/legacy'
 import * as Crypto from 'expo-crypto'
 import { decode as decodeBase64 } from 'base64-arraybuffer'
 import { Ionicons } from '@expo/vector-icons'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import { FunctionsHttpError } from '@supabase/functions-js'
 import { AppColors } from '@/constants/Colors'
 import { supabase } from '@/lib/supabase'
-import { useUser } from '@/hooks/useUser'
+import { useUserContext } from '@/components/UserProvider'
+import { RecipeLoading } from '@/components/RecipeLoading'
 
-type ScreenState = 'camera' | 'preview' | 'uploading' | 'success' | 'error'
+type ScreenState =
+  | 'camera'
+  | 'preview'
+  | 'uploading'
+  | 'analyzing'
+  | 'error'
+
+type InvokeOutcome =
+  | { kind: 'success' }
+  | { kind: 'limit' }
+  | { kind: 'fallback' } // network/parse failure after retry — still navigate
 
 async function resizeImage(uri: string, width: number, height: number): Promise<string> {
   // Skip the round-trip if the source is already within bounds — avoids upscaling
@@ -39,8 +52,25 @@ async function resizeImage(uri: string, width: number, height: number): Promise<
   return result.uri
 }
 
+// supabase.functions.invoke returns FunctionsHttpError on non-2xx — the response
+// body lives on .context, so we have to parse it to distinguish scan_limit_reached
+// from a real network/parse failure.
+async function readErrorCode(err: unknown): Promise<string | null> {
+  if (err instanceof FunctionsHttpError) {
+    try {
+      const body = await err.context.json()
+      return typeof body?.error === 'string' ? body.error : null
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
 export default function CameraScreen() {
-  const { user } = useUser()
+  const { user } = useUserContext()
+  const router = useRouter()
+  const { source, pick } = useLocalSearchParams<{ source?: string; pick?: string }>()
   const cameraRef = useRef<CameraView>(null)
   const [permission, requestPermission] = useCameraPermissions()
   const [facing, setFacing] = useState<CameraType>('back')
@@ -83,13 +113,43 @@ export default function CameraScreen() {
     setState('preview')
   }, [])
 
+  useEffect(() => {
+    if (pick === 'library') void handlePickFromLibrary()
+  }, [pick, handlePickFromLibrary])
+
+  // One retry on network / parse errors. scan_limit_reached short-circuits
+  // immediately — no point retrying a quota error.
+  const invokeGenerateRecipes = useCallback(
+    async (scanId: string): Promise<InvokeOutcome> => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { error } = await supabase.functions.invoke('generate-recipes', {
+          body: { scan_id: scanId, source },
+        })
+
+        if (!error) return { kind: 'success' }
+
+        const code = await readErrorCode(error)
+        if (code === 'scan_limit_reached') return { kind: 'limit' }
+
+        if (attempt === 1) {
+          console.warn('generate-recipes failed after retry:', code ?? error.message)
+          return { kind: 'fallback' }
+        }
+      }
+      return { kind: 'fallback' }
+    },
+    [source],
+  )
+
   const handleUpload = useCallback(async () => {
     if (!capturedUri || !user) return
     setState('uploading')
     setErrorMessage(null)
 
+    let scanId: string | null = null
+
     try {
-      const scanId = Crypto.randomUUID()
+      scanId = Crypto.randomUUID()
       const storagePath = `${user.id}/${scanId}.jpg`
 
       // Read the file as base64 → ArrayBuffer. Do NOT use fetch(uri).blob() here:
@@ -115,16 +175,44 @@ export default function CameraScreen() {
         })
 
       if (insertError) throw insertError
-
-      if (!mountedRef.current) return
-      setState('success')
     } catch (err: any) {
       console.error('Upload error:', err)
       if (!mountedRef.current) return
       setErrorMessage(err?.message ?? 'Something went wrong. Try again.')
       setState('error')
+      return
     }
-  }, [capturedUri, user])
+
+    if (!mountedRef.current || !scanId) return
+    setState('analyzing')
+
+    const outcome = await invokeGenerateRecipes(scanId)
+    if (!mountedRef.current) return
+
+    if (outcome.kind === 'limit') {
+      setCapturedUri(null)
+      setState('camera')
+      if (user.is_anonymous === true) {
+        router.push('/onboarding/auth-gate?reason=scan_limit' as any)
+        return
+      }
+      router.push('/paywall?source=hard_wall' as any)
+      return
+    }
+
+    // Reset the camera state before navigating so coming back to the tab is clean.
+    setCapturedUri(null)
+    setState('camera')
+
+    // Both 'success' and 'fallback' navigate. The results screen detects the
+    // missing-recipes case from the scan row and shows the fallback banner.
+    const params = new URLSearchParams()
+    if (outcome.kind === 'fallback') params.set('fallback', '1')
+    if (source === 'onboarding') params.set('source', 'onboarding')
+    const query = params.toString()
+    const href = query ? `/scan/${scanId}?${query}` : `/scan/${scanId}`
+    router.push(href as any)
+  }, [capturedUri, user, invokeGenerateRecipes, router, source])
 
   const handleRetry = useCallback(() => {
     setCapturedUri(null)
@@ -164,23 +252,6 @@ export default function CameraScreen() {
     )
   }
 
-  // ── Success state ──────────────────────────────────────────────────────────
-
-  if (state === 'success') {
-    return (
-      <SafeAreaView style={[styles.container, styles.centered]}>
-        <Ionicons name="checkmark-circle" size={64} color={AppColors.success} />
-        <Text style={styles.successTitle}>Photo saved</Text>
-        <Text style={styles.successBody}>
-          Recipe generation is coming in Week 2. Your scan is stored.
-        </Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={handleRetry}>
-          <Text style={styles.primaryButtonText}>Scan again</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    )
-  }
-
   // ── Error state ────────────────────────────────────────────────────────────
 
   if (state === 'error') {
@@ -199,18 +270,30 @@ export default function CameraScreen() {
     )
   }
 
-  // ── Preview state ──────────────────────────────────────────────────────────
+  // ── Analyzing — branded full-screen loading scene ─────────────────────────
+  // Hard cut away from the photo the moment the AI phase begins. The photo +
+  // overlay reads as "still uploading"; the loading scene signals a new phase.
+
+  if (state === 'analyzing') {
+    return <RecipeLoading />
+  }
+
+  // ── Preview / uploading — photo with overlay ───────────────────────────────
+  // 'uploading' shows the photo + "Saving photo…" spinner (~1–2s).
+  // 'preview' shows the photo + Retake / Use this photo button row.
 
   if (state === 'preview' || state === 'uploading') {
+    const overlayLabel = state === 'uploading' ? 'Saving photo…' : null
+
     return (
       <View style={styles.container}>
         <Image source={{ uri: capturedUri! }} style={styles.preview} resizeMode="cover" />
 
         <SafeAreaView style={styles.previewControls}>
-          {state === 'uploading' ? (
+          {overlayLabel ? (
             <View style={styles.uploadingRow}>
               <ActivityIndicator color={AppColors.surface} />
-              <Text style={styles.uploadingText}>Saving photo...</Text>
+              <Text style={styles.uploadingText}>{overlayLabel}</Text>
             </View>
           ) : (
             <View style={styles.previewButtonRow}>
@@ -282,20 +365,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   permissionBody: {
-    fontFamily: 'Inter_400Regular',
-    fontSize: 15,
-    color: AppColors.textMuted,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  successTitle: {
-    fontFamily: 'Fraunces_700Bold',
-    fontSize: 24,
-    color: AppColors.text,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  successBody: {
     fontFamily: 'Inter_400Regular',
     fontSize: 15,
     color: AppColors.textMuted,

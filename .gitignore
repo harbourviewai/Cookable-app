@@ -61,3 +61,12 @@ yarn-error.log*
 # Coverage
 coverage/
 .nyc_output/
+
+# Editor / local tooling
+.windsurf/
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+.claude/design-fetch.tar
+
+# Supabase CLI scratch
+**/supabase/.temp/

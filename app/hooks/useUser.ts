@@ -7,6 +7,7 @@ export type UserProfile = {
   display_name: string | null
   avatar_url: string | null
   subscription_tier: 'free' | 'plus' | 'pro'
+  onboarding_completed_at: string | null
 }
 
 type UserState = {
@@ -19,7 +20,7 @@ type UserState = {
 async function fetchProfile(userId: string): Promise<UserProfile | null> {
   const { data, error } = await supabase
     .from('users')
-    .select('id, display_name, avatar_url, subscription_tier')
+    .select('id, display_name, avatar_url, subscription_tier, onboarding_completed_at')
     .eq('id', userId)
     .single()
   if (error) {

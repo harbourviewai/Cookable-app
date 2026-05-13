@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Splash variant: mono-Pine bowl + swirl on transparent canvas.
+       Pairs with splash.backgroundColor #FAF7F2 (Linen) so the bowl reads
+       as a quiet Pine silhouette while the brand swirl stays unmistakable. -->
+  <path d="M 222 560 C 222 560, 222 718, 414 740 C 470 746, 554 746, 610 740 C 802 718, 802 560, 802 560 A 290 38 0 0 1 222 560 Z" fill="#2D5F4E"/>
+  <ellipse cx="512" cy="560" rx="278" ry="34" fill="#234E40"/>
+  <path d="M 512 500 C 380 440, 380 360, 512 320 C 644 280, 644 200, 512 160 C 432 130, 488 70, 512 40" fill="none" stroke="#2D5F4E" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

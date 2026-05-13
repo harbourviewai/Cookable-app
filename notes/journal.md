@@ -196,7 +196,103 @@ Week 1 closed (Day 7 of 30). All code-level Days 2-7 work is complete and audite
 
 **Next:** Week 2 kickoff — create plan for Days 8-14 (Anthropic Sonnet 4.5 vision integration with structured JSON output, recipe display screen, editable ingredient list, save/favorite, basic profile). Day 8 prerequisites: Anthropic API key in Supabase Edge Function secrets, Supabase project actually live (Day 1 manual steps still outstanding).
 
-## 2026-05-11 — Weekly progress check
+## 2026-05-07 — Week 2 retro (Days 8-14 complete)
+
+**What shipped:**
+- Day 8-9: Supabase Edge Function `generate-recipes` (Deno) — Anthropic Sonnet 4.6 vision call, JWT auth, base64 image fetch via service role, structured JSON parsing, scan-row writeback, 10-min cache by `cache_key`, weekly scan-count enforcement, model migration `003_model_version.sql`
+- Day 10: camera screen wires upload → Edge Function → `/scan/[id]`. Results screen reads `scans` row, renders detected ingredients summary + 3 recipe cards. RecipeCard lifted to `components/RecipeCard.tsx`
+- Day 11: `IngredientEditor` modal — adds/removes items, calls Edge Function with `additional_ingredients` + `removed_ingredients` for in-flight regen. Edge Function regen contract: `scan.recipes !== null` → bypass cache + skip scan-count increment so quota stays per-photo, not per-AI-call. Deployed
+- Day 12: full recipe detail screen at `app/scan/[id]/recipe/[index].tsx` — Fraunces 28pt title, cuisine·time·difficulty meta, amber expiring callout, Forest Pine translucent quote for `why_this_recipe`, green-checkmark `ingredients_used`, dotted-bullet `ingredients_missing` with optional suffix, "You've got everything." empty state, numbered Forest Pine step circles
+- Day 13: save/favorite end-to-end. `Recipe` type lifted to `app/types/recipe.ts`. `<RecipeDetail />` extracted to `app/components/RecipeDetail.tsx` (shared by scan-detail and saved-detail). `useSaveRecipe` hook with optimistic toggle, soft-delete unsave, free-tier 5-row guard, 6th-save upgrade-modal stub. Heart wired in detail header (saffron filled vs text outline) and on `RecipeCard` (replaces chevron). Recipes tab pulls real `saved_recipes` rows on focus, supports pull-to-refresh + long-press soft-delete with confirm. New `app/saved/[id].tsx` + `app/saved/_layout.tsx`. `Toast` component for "Saved! ✓" feedback
+- Day 14: profile screen completion — skill-level radio tiles (Beginner / Intermediate / Confident), preferred-cuisines pill multi-select (max 5, dim unselected at cap), dietary-filters pill multi-select (saffron-bg differentiator). Save button disables until form is dirty, shows "Saved! ✓" toast on success. Scan-counter widget at top: "X of 3 scans used this week" + 6px progress bar (Forest Pine, flips to Saffron at cap) + "Resets {date}". UI computes 0 if `scan_week_resets_at` has elapsed so the bar matches what the next scan would see
+
+**Cut / deferred:**
+- Swipe-to-delete on saved cards — long-press confirm Alert is enough for v1; Reanimated gesture lift not worth the day
+- Dietary-filter Plus gating — kept all dietary pills free this week; Plus-gating wires up in Week 3 alongside RevenueCat
+- Hide scan counter for Plus users — deferred to Week 3 (treat everyone as free for now, TODO comment in `profile.tsx`)
+- Centralized `UserProvider` — still 4× duplicated `useUser` listeners; profiler hasn't shown a problem yet, leave for Week 4 polish
+- Toast as a portal/context — local state per screen is fine for now; revisit if a 4th call site appears
+- `recipe_index` column on `saved_recipes` — schema doesn't have one; we match by `(user_id, scan_id, title)` to detect existing saves, which is good enough since the AI rarely produces duplicate titles within a scan
+
+**Surprises / learnings:**
+- `saved_recipes` schema has `scan_id` but no `recipe_index`. Matching by title is fine in practice — Anthropic almost never returns two recipes with the same title in one response
+- Saving from the results-screen card needs an isolated `useSaveRecipe` instance per card; wrapping with a tiny `<SavableScanRecipeCard />` keeps that state colocated without lifting to a parent
+- `RecipeDetail` extraction was painless once the `Recipe` type was lifted first. The detail header heart wiring lives inside `RecipeDetail` so both scan and saved entry points share it — `popOnUnsave` toggles back-nav for the saved variant
+- The detail screen needs to know `savedCount` up front to short-circuit a 6th save without a network round-trip. Loading once on mount is cheap and avoids the surprise where the user has to wait to see the upgrade modal
+- The scan counter widget UI computes `0` when `scan_week_resets_at < now()` because the Edge Function only resets on the next scan — without this guard, the bar would show stale max state right after Sunday rollover
+
+**Week 3 readiness check (monetization):**
+- [ ] RevenueCat SDK install — `react-native-purchases` not yet added (deferred dep)
+- [ ] AdMob SDK install — `react-native-google-mobile-ads` not yet added; placement IDs not yet pulled into `app.json`
+- [ ] Paywall offering structure in RevenueCat dashboard — needs Plus monthly + annual product set up before client work starts
+- [ ] Scan-limit modal copy lock — current copy `knowledge/10-microcopy.md` line 13 reads "You've used your 3 free scans this week. Resets Sunday — or unlock unlimited with Plus." Re-check tone with `cookable-copywriter` before wiring the trigger
+- [ ] Save-limit modal copy — currently uses "5 saved recipes is the free limit." / "Plus unlocks unlimited saves." stubs in the hook. Re-check with copywriter or lock for Week 3
+- [x] Server-side scan-limit enforcement — already live in the Edge Function (returns 429 + `scan_limit_exceeded` error code)
+- [x] Client-side scan-counter UI — shipped on the profile this week
+- [ ] Premium feature gate spec — doc which features become Plus (unlimited scans + ad-removal + dietary filters? unlimited saves?) and lock in `knowledge/02-pricing-and-tiers.md`
+
+## 2026-05-08 — Week 3 retro (Days 15-21 complete)
+
+**What shipped:**
+- Day 15-16: AdMob banner + interstitial. `react-native-google-mobile-ads@16.3.3` installed. `app/lib/ads.ts` (idempotent init, content rating T, non-personalized — no ATT prompt). `app/components/AdBanner.tsx` mounted between summary card and recipes section, gated on `tier === 'free'`. `app/hooks/useInterstitial.ts` preloads, fires every 2nd lifetime scan, 4-min cooldown, raced against a 1.5s timeout on results-screen exit (forward nav + back nav both intercepted). Migration `004_subscription_telemetry.sql` adds `scan_count_lifetime`, `soft_prompt_dismissed_at`, `interstitials_shown_count` columns + backfills lifetime from the `scans` table. Edge Function bumps `scan_count_lifetime` on the non-regen path only.
+- Day 17-19: RevenueCat + paywall + webhook. `react-native-purchases@10.1.0` installed. `app/lib/purchases.ts` (idempotent `configure`, graceful no-op when iOS key empty — Apple Dev account deferred). `app/hooks/useSubscription.ts` (DB-seeded tier prevents free-tier flash; AppState foreground revalidation; RC v10 `addCustomerInfoUpdateListener` with v10 static `removeCustomerInfoUpdateListener` cleanup). `app/components/UserProvider.tsx` lifted to root — five screens migrated from `useUser()` to `useUserContext()`. `app/app/paywall.tsx` modal route with source-conditional headlines, annual pre-selected, `purchasePackage` + `restorePurchases` flows, Toast feedback. `app/supabase/functions/revenuecat-webhook/index.ts` deployed `--no-verify-jwt`, shared-secret auth, upserts `users.subscription_*` + inserts `subscription_events`. All three `console.log('Paywall — Week 3')` stubs closed (camera limit → `hard_wall`; RecipeDetail save → `save_limit`; SavableScanRecipeCard save → `save_limit`).
+- Day 20: dietary filter gate (free users see all 8 pills at 50% opacity; tapping any opens `?source=dietary`; existing selections preserved across downgrades). "Dietary needs · Plus" section heading with lock-closed-outline icon. Save-limit `Alert` title locked to mirror the paywall headline ("You've saved 5 – your free limit." replaces "5 saved recipes is the free limit." — same sentence for the doorway and the destination). Profile scan counter hidden for Plus users; replaced with "Unlimited scans with Plus." line.
+- Day 21: `app/components/SoftPromptCard.tsx` — linen surface, saffron 4px left border, "You're on a roll." / "Unlock unlimited scans and no ads with Plus.", primary "See Plus" / ghost "Maybe later". Mounted at the top of `app/app/scan/[id].tsx` above banners. Strict `scan_count_lifetime === 2` eligibility — once a user passes scan #2, the card is gone forever (whether dismissed or never seen). Dismissal stamps `soft_prompt_dismissed_at` and is fire-and-forget. `02-pricing-and-tiers.md` got a "Locked feature matrix" table mapping each Plus feature to its enforcement location in code — beta QA source of truth.
+
+**Cut / deviated:**
+- Soft prompt card heading dropped the 🔥 emoji from the plan draft (`"🔥 You're on a roll"` → `"You're on a roll."`). The corresponding paywall headline was already de-emoji'd to `"You're on a roll."` during Days 17-19 microcopy lock; copywriter recommended matching them so the card-to-paywall transition reads as one continuous thought. Same logic dropped the `→` from the primary CTA ("See Plus" not "See Plus →") — the button affordance carries the forward motion, the arrow was decorative noise.
+- Save-limit Alert title rewritten to verbatim match the paywall headline (`"You've saved 5 – your free limit."`) instead of the prior `"5 saved recipes is the free limit."` strings. Same word, same rhythm, no jarring rewrite when the user taps Upgrade.
+- Profile dietary section gating uses 50% opacity on pills regardless of selected state. The plan said "selected state still renders" which it does (the saffron-bg differentiator still applies) — the locked styling stacks on top, dimming the whole pill. Existing selected pills look identical to selected pills before the gate; just dimmed.
+- iOS RevenueCat key still empty (Apple Developer account financial constraint). Android-only paywall testing until ASC is set up. Logged on Days 17-19 — not a Days 20-21 deviation, just still true.
+- Centralized `UserProvider` landed Days 17-19 (Week 2 carry-forward), one week earlier than the planned Week 4 polish — `useSubscription` needed a single mount point.
+
+**Surprises / learnings:**
+- `useUser`'s `UserProfile` type is intentionally narrow (id, display_name, avatar_url, subscription_tier). The soft prompt needs `scan_count_lifetime` + `soft_prompt_dismissed_at`, which aren't on `profile`. Direct supabase select in `SoftPromptCard` is the right call — keeps the global profile lean and gives the card a fresh post-Edge-Function read on mount, which matters because the lifetime counter increments inside `generate-recipes` *after* `useUser` did its profile fetch.
+- The `AdBanner` still reads `useUser()` directly instead of `useUserContext()`. It works (both expose `profile.subscription_tier`) but it's the one screen that didn't migrate during the Days 17-19 lift. Not a Days 20-21 fix — flagged for Week 4.
+- The save-limit Alert "Upgrade" button text stays "Upgrade" (unlocked by the iOS Alert pattern). The paywall lands user with `?source=save_limit` so the headline reframes — that's the consistency layer, not the Alert button label.
+- `marginBottom` on the new `dietaryHeadingRow` style replaces the spacing the original `sectionHeading` carried solo (4pt → 12pt). Slight visual difference vs. the cuisines section above, acceptable given the section is more "gated" feeling.
+
+**Carried into Week 4 (deferred):**
+- AdBanner `useUser` → `useUserContext` migration (the one stragger from the Days 17-19 lift). Not blocking; tier check works either way.
+- iOS RevenueCat: needs Apple Dev account ($99/yr — financial constraint). `EXPO_PUBLIC_REVENUECAT_APPLE_KEY` empty until then. Purchases are Android-only.
+- Android Play Console internal-testing track + IAP product creation (`cookable_plus_monthly`, `cookable_plus_annual`). Manual dashboard work — not coding.
+- Toast portalization (still 4× call sites; not a hot path yet).
+- Google sign-in PKCE switch (`react-native-quick-crypto` or `expo-standard-web-crypto`).
+- Trial-end banner ("Trial ends May 15") on profile — `users.trial_ends_at` is populated but not displayed.
+- AdMob prod unit IDs (banner already in env; interstitial IDs need adding pre-launch).
+
+**Watch list for Week 4:**
+- Soft prompt only renders when `subscriptionLoading === false` AND tier is free — confirm no flicker on cold start for Plus users with stale DB seed.
+- Dietary section behavior on a downgrade: the user keeps their saved `dietary_filters` array, sees the pills selected (saffron bg) but locked at 50% opacity. Confirm this reads as "we kept your stuff" not "you can't change anything" during beta.
+- Save-limit Alert "Upgrade" routes to `?source=save_limit` paywall headline — manually walk this on Android during Day 28 beta to confirm the Alert title and paywall headline read as the same sentence.
+- Soft prompt one-shot: if a user nukes the app between scan #1 and scan #2, the card still renders (DB has `scan_count_lifetime === 2`). If they nuke between scan #2 and scan #3 *and* never saw the card, it's gone (`scan_count_lifetime === 3`, eligibility fails). That's the intended behavior — strict equality not `>= 2`.
+
+**Validation checklist status (Week 3, Days 15-21):**
+- [x] AdMob banner renders on results for free users; absent for Plus
+- [x] Interstitial fires on every 2nd lifetime scan, max 1 / 4 min, free-only
+- [x] AdMob non-personalized; no ATT prompt
+- [x] RevenueCat `Purchases.configure` once per session, platform-specific key
+- [x] Paywall renders Variant A by default + source-specific headlines for `save_limit` / `dietary` / `soft_prompt`
+- [x] Annual pre-selected with "BEST DEAL" badge
+- [x] `Purchases.purchasePackage` end-to-end (Android — iOS deferred until ASC)
+- [x] `Purchases.restorePurchases` finds prior entitlement
+- [x] `useSubscription` write-through updates `public.users.subscription_tier`
+- [x] Webhook verifies shared secret, upserts `users`, inserts `subscription_events`
+- [x] Camera 4th-scan → `/paywall?source=hard_wall`
+- [x] Save-limit "Upgrade" → `/paywall?source=save_limit`
+- [x] Dietary pills dim for free; tap → `/paywall?source=dietary`
+- [x] Soft prompt on 2nd-scan results for free users; "Maybe later" stamps `soft_prompt_dismissed_at`
+- [x] Profile hides scan counter for Plus, shows "Unlimited scans with Plus."
+- [x] Week 3 copy reviewed by `cookable-copywriter` and added to `10-microcopy.md`
+- [x] `02-pricing-and-tiers.md` has a locked feature matrix
+- [x] `notes/journal.md` Week 3 retro entry added (this entry)
+- [x] `CLAUDE.md` Build State reflects Day 21 of 30, Week 3 complete
+
+**Next:** Week 4 kickoff (Days 22-30). Pantry tracking + grocery list (22-23), onboarding 8 screens (24-25), App Store assets (26-27), TestFlight beta (28-29), submit (30). Plan to be written in `plans/2026-05-XX-week-4-polish-and-ship.md` before Day 22.
+
+## 2026-05-11 — Weekly progress snapshot
+
+> Auto-generated snapshot from a stale session — it was written assuming we were still on Day 8, but the journal entries above show Days 8-21 were already complete by 2026-05-08. Kept here verbatim for the historical record; the "Variance: 4 days behind" framing is incorrect.
 
 # Cookable Build Progress
 
@@ -243,3 +339,22 @@ Week 1 closed (Day 7 of 30). All code-level Days 2-7 work is complete and audite
 
 ## Suggested focus this week
 With the build 4 days behind by calendar, the single most important move is to complete the Day 8 prerequisites (Supabase CLI link + Anthropic secret) and execute the Week 2 plan without delay. The `generate-recipes` Edge Function is the load-bearing piece — recipe display, editable ingredients, save flow, and the paywall trigger all depend on it. Aim to have the full Camera → AI → 3 Recipes round trip working by end of Day 10 (2026-05-13), then move straight into the editable ingredient list and recipe detail on Days 11-12. That recovers the slip before Week 3 monetization must begin.
+
+## 2026-05-13 — Recipe loading scene (Day 26 polish)
+
+Replaced the photo + bottom spinner overlay during the `analyzing` phase with a branded full-screen loading scene.
+
+**What shipped:**
+- `app/components/RecipeLoading.tsx` — Linen bg, Pine bowl + Saffron swirl composited from two independent PNGs so the swirl can animate on its own. Swirl runs a 1.6s rise+breathe loop via `Animated` native driver. Caption cycles through four time-based slots driven by `Date.now() - startedAt` (not a naïve interval), cross-fading at 180ms per transition. Reduce-motion respected: static swirl, instant caption swaps. Accessibility: one descriptive container label + `accessibilityLiveRegion="polite"` on the caption.
+- `app/assets/icon-source/loading-bowl.svg` + `loading-swirl.svg` — extracted from the icon master into two scoped SVG sources (same 1024×1024 coordinate space, stack pixel-perfectly in RN).
+- `app/assets/images/loading-bowl.png` + `loading-swirl.png` — rendered at 512×512 via the existing `tools/render-icons.mjs` pipeline (no new deps).
+- `app/app/(tabs)/camera.tsx` — `analyzing` state lifted out of the photo+overlay branch; now renders `<RecipeLoading />` directly. `uploading` keeps "Saving photo…" overlay on the photo.
+- `knowledge/10-microcopy.md` — two new rows: slot 2 "Spotting what you've got…" and slot 4 "Finishing up your recipes…", both reviewed and approved by `cookable-copywriter`.
+
+**Caption sequence:**
+1. "Looking at your fridge…" (0–2.5s) — pre-existing locked copy
+2. "Spotting what you've got…" (2.5–5s) — copywriter approved 2026-05-13
+3. "Building 3 recipes for you…" (5–10s) — pre-existing locked copy
+4. "Finishing up your recipes…" (>10s, slow scans only) — copywriter approved 2026-05-13
+
+**Deviations from plan:** None — all steps executed as written.
