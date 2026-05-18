@@ -358,3 +358,51 @@ Replaced the photo + bottom spinner overlay during the `analyzing` phase with a 
 4. "Finishing up your recipes…" (>10s, slow scans only) — copywriter approved 2026-05-13
 
 **Deviations from plan:** None — all steps executed as written.
+
+---
+## 2026-05-18 — Weekly progress check
+
+# Cookable Build Progress
+
+**As of:** 2026-05-18
+
+## Schedule
+- **Plan target:** Day 19 of 30
+- **Actual progress:** Day 26 of 30 (Day 26 polish complete as of 2026-05-13)
+- **Variance:** 7 days ahead
+
+## What's done
+- **Week 1 (Days 1-7):** Expo SDK 54 scaffold, brand theme, 4-tab nav, Apple + Google auth, camera + upload + scans insert, migrations 001-002, full audit fixes
+- **Week 2 (Days 8-14):** `generate-recipes` Edge Function (Claude Sonnet 4.6 vision), camera→results loop, ingredient editor + regen, recipe detail, save/favorite, profile + scan counter, migration 003
+- **Week 3 (Days 15-21):** AdMob banner + interstitial, RevenueCat paywall + webhook, premium feature gates (scan limit, save limit, dietary filters), soft prompt, `UserProvider` context lift, migration 004
+- **Day 22-23:** Pantry tab + grocery list (Plus-only); `PantryView`, `GroceryView`, `usePantry`, `useGroceryList`, Edge Function pantry upsert for Plus users, `RecipeDetail` "Add to grocery list" button, `paywall.tsx` pantry/grocery source branches, Locked Feature Matrix updated
+- **Day 24-25:** 8-screen onboarding flow (`welcome` → `how-it-works` → `skill` → `cuisine` → `notifications` → `first-scan` → `auth-gate` → `soft-paywall`); anonymous Supabase auth on screen 6; `linkIdentity()` conversion on screen 7; `expo-notifications` weekly Sunday reminder; migration 005 (`onboarding_completed_at`)
+- **Day 26 polish (2026-05-13):** `RecipeLoading.tsx` — branded full-screen linen scene replaces photo+spinner during `analyzing` phase; Pine bowl + Saffron swirl composited from two pre-rendered PNGs; 1.6s breathe loop; time-driven Fraunces caption cycling through four slots; reduce-motion + VoiceOver live region wired
+
+## What's in flight
+- `plans/2026-05-09-week-4-polish-and-ship.md` — **Status: Days 22-25 Implemented (Days 26-30 still Draft)**
+  - Days 26-30 tasks remaining: store asset production (Day 26-27), beta distribution (Day 28-29), App Store + Play Console submission (Day 30)
+
+## What's next (the critical path)
+1. **App Store + Play Store assets (Days 26-27 remaining work)** — listing copy from `knowledge/11-app-store-listing.md` into consoles, 10 screenshots in all required sizes, iOS Privacy Nutrition Labels, Android Data Safety section; app icon + splash already rendered but prod AdMob app IDs in `app.json` still need swapping
+2. **Apple Developer account purchase ($99/yr)** — hard blocker for Day 28-29 iOS TestFlight beta and Day 30 iOS submission; if unpurchased by Day 26 the Android-only path becomes the default
+3. **Play Console internal-testing track + IAP product creation** — `cookable_plus_monthly` ($4.99) and `cookable_plus_annual` ($29.99), both 7-day trial; required before Android paywall sandbox testing on Day 28
+
+## Pre-launch checklist
+- Accounts: 7 / 9 complete (Apple Dev deferred — financial constraint; email provider not confirmed)
+- Legal: 0 / 5 complete (privacy policy, ToS, support email, Privacy Nutrition Labels, Data Safety all outstanding)
+- Brand assets: 5 / 7 complete (screenshots and press kit not yet done)
+- App readiness: 10 / 13 complete (Apple Sign In blocked; push notifications coded but untested; dark mode not implemented)
+- Pre-launch testing: 0 / 4 complete (beta not yet started)
+- Distribution prep: 0 / 8 complete (landing page, email waitlist, social handles, TikTok content, PH hunter all outstanding)
+
+## Risks / blockers
+- **Apple Developer account ($99/yr) not purchased** — blocks iOS TestFlight beta (Day 28) and iOS App Store submission (Day 30); becomes a hard block if still missing on Day 26
+- **Play Console internal-testing track + IAP products not configured** — blocks Android paywall sandbox testing; manual dashboard work, no code required
+- **Legal pages (privacy policy + ToS) not hosted** — App Store and Play Console will reject submission without live URLs at `cookable.app/privacy` and `cookable.app/terms`; 2-hour task but not yet started
+- **AdMob prod interstitial unit IDs missing from `eas.json`** — banner IDs wired; interstitial IDs need adding before the Day 28 production build
+- **`AdBanner` still uses `useUser()` directly** — Week 3 carry-over; not blocking but flagged for clean-up before submission
+- **Trial-end banner not displayed** — `users.trial_ends_at` is populated but not surfaced on the profile screen; minor polish gap
+
+## Suggested focus this week
+With the build running 7 days ahead of calendar schedule and Day 30 landing on 2026-05-29 (11 days away), the priority is clearing the external blockers before they become submission-day fires. The Apple Developer account purchase and Play Console IAP product setup are the only tasks that cannot be done by code — both need to happen this week to keep Day 28 beta on track. In parallel, the legal pages (privacy policy + Terms) are a 2-hour task on any generator (termly.io, freeprivacypolicy.com) hosted on the existing domain — there is no reason to leave these for Day 26. Once those external gates are open, the remaining build work (screenshots, store copy, production builds) is straightforward and well within the buffer the team has built up.
