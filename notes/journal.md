@@ -457,3 +457,55 @@ With the build running 7 days ahead of calendar schedule and Day 30 landing on 2
 
 ## Suggested focus this week
 The 30-day target has passed and the build is 4 plan-days from submission, but nothing unblocks without two non-code actions first: purchase the Apple Developer account and host the privacy policy and Terms of Service. Both have been flagged for weeks. Host the legal pages today (any free generator + a static page on the existing domain takes under two hours) and purchase the Apple account immediately so TestFlight can open in parallel with store asset production. With those gates open, the remaining work — screenshots, store listings, production builds — is bounded and can land this week. The distribution side (landing page, waitlist, social) is entirely unstarted and represents real launch-day risk independent of the store submission; even getting a waitlist page live and one social handle claimed would meaningfully reduce that gap.
+
+---
+## 2026-06-08 — Weekly progress check
+
+# Cookable Build Progress
+
+**As of:** 2026-06-08
+
+## Schedule
+- **Plan target:** Day 30 of 30 (submission target was 2026-05-29 — 10 calendar days ago)
+- **Actual progress:** Day 26 of 30 (last code shipped 2026-05-13 — 26 days ago)
+- **Variance:** 4 days behind; no new code has shipped in 26 days
+
+## What's done
+- **Week 1 (Days 1-7):** Expo SDK 54 scaffold, brand theme, 4-tab nav, Apple + Google auth (Google validated; Apple pending account), camera + resize + Supabase Storage upload, migrations 001-002, full audit pass
+- **Week 2 (Days 8-14):** `generate-recipes` Edge Function (Claude Sonnet 4.6 vision), camera-to-results loop, ingredient editor + regen (bypass cache, no quota increment), recipe detail screen, save/favorite with free-tier 5-save guard, profile + scan counter, migration 003
+- **Week 3 (Days 15-21):** AdMob banner + interstitial (free-tier only, every 2nd lifetime scan), RevenueCat paywall + webhook (Android; iOS deferred), premium feature gates (scan limit, save limit, dietary filters, soft prompt on scan #2), `UserProvider` context lift, migration 004
+- **Day 22-23:** Pantry tab + grocery list (Plus-only) — `PantryView`, `GroceryView`, `usePantry`, `useGroceryList`, Edge Function pantry upsert for Plus users, `RecipeDetail` "Add to grocery list" button, `paywall.tsx` pantry/grocery source branches, Locked Feature Matrix updated
+- **Day 24-25:** 8-screen onboarding flow (welcome → how-it-works → skill → cuisine → notifications → first-scan → auth-gate → soft-paywall); anonymous Supabase auth on screen 6; `linkIdentity()` conversion on screen 7; weekly Sunday push reminder; migration 005
+- **Day 26 polish (2026-05-13):** `RecipeLoading.tsx` branded full-screen linen scene (Pine bowl + Saffron swirl, 1.6s breathe loop, four time-driven Fraunces captions, reduce-motion + VoiceOver wired)
+
+## What's in flight
+- `plans/2026-05-09-week-4-polish-and-ship.md` — **Status: Days 22-25 Implemented; Days 26-30 still Draft**
+  - Days 26-27 (App Store + Play Store assets): not started
+  - Days 28-29 (TestFlight + Play Console internal beta, bug-fix pass): not started
+  - Day 30 (App Store Connect + Play Console submission): not started
+- All other plans (`week-1-foundation`, `week-2-core-magic`, `week-3-monetization`, `recipe-loading-scene`) — **Status: Implemented**
+
+## What's next (the critical path)
+1. **Legal pages (privacy policy + ToS) — immediate, non-code, ~2 hours.** Both stores reject submissions without live URLs at `cookable.app/privacy` and `cookable.app/terms`. Use termly.io or freeprivacypolicy.com; host on the existing domain. This has been the top non-code blocker for three weeks with no action.
+2. **Apple Developer account purchase ($99/yr)** — hard blocker for iOS TestFlight (Day 28) and App Store submission (Day 30). Every week without it pushes iOS launch further out. If not resolved this week, plan to ship Android-only and re-open iOS in June.
+3. **App Store + Play Store assets (Days 26-27)** — the first remaining code task. Listing copy from `knowledge/11-app-store-listing.md`, 10 screenshots in all required sizes, iOS Privacy Nutrition Labels, Android Data Safety section, swap AdMob test app IDs to prod in `app.json` / `eas.json`.
+
+## Pre-launch checklist
+- Accounts: 7 / 9 complete (Apple Dev deferred — financial constraint; email provider not confirmed)
+- Legal: 0 / 5 complete (privacy policy, ToS, support email, Privacy Nutrition Labels, Data Safety all outstanding)
+- Brand assets: 5 / 7 complete (App Store screenshots and press kit not yet done)
+- App readiness: 10 / 13 complete (Sign in with Apple blocked; push notifications coded but untested on device; dark mode not implemented)
+- Pre-launch testing: 0 / 4 complete (beta not yet started)
+- Distribution prep: 0 / 8 complete (landing page, email waitlist, social handles, TikTok content, PH hunter all outstanding)
+
+## Risks / blockers
+- **26 days since last code shipped (2026-05-13)** — the build has been stalled for nearly four weeks; momentum risk increases with every idle day
+- **Submission target passed 10 days ago (2026-05-29)** — 4 plan-days of work (Days 27-30) remain unstarted; no new work has landed since the previous snapshot
+- **Apple Developer account ($99/yr) still not purchased** — blocks iOS TestFlight and App Store submission with no workaround; if unpurchased by end of this week, ship Android-only and fold iOS in post-launch
+- **Legal pages (privacy policy + ToS) not hosted** — both stores will reject without live URLs; a rejected submission adds 24-48h per round-trip on top of the existing slip; this is a 2-hour task with no code dependency
+- **Play Console internal-testing track + IAP products not created** — blocks Android paywall sandbox testing; manual dashboard work, no code required
+- **AdMob prod interstitial unit IDs missing from `eas.json`** — must be added before the Day 28 production build
+- **Distribution prep at 0 / 8** — landing page, waitlist, social handles, and launch content are entirely unstarted; launch without an audience in place dramatically reduces day-one conversion chances
+
+## Suggested focus this week
+The build is functionally complete through Day 26 and four days of work separate it from submission — but those four days are being blocked by non-code decisions that have stalled for a month. The immediate priority is clearing the two external gates: host the legal pages today (generator + static hosting, under two hours) and purchase the Apple Developer account this week or commit to Android-only launch. Once those gates are open, the remaining work — store screenshots, listing copy, production EAS builds, beta invites — can land in a focused 3-5 day push. In parallel, even a single distribution action (a waitlist landing page, one TikTok draft, one social handle claimed) would meaningfully reduce launch-day risk. The code is ready; the blockers are all decisions and admin tasks.
