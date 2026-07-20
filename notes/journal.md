@@ -773,3 +773,56 @@ Six consecutive snapshots, zero movement on any external gate. The situation has
 ## Suggested focus this week
 Seven consecutive snapshots, zero movement. The code through Day 26 is complete and sound; four mechanical plan-days (store assets, beta builds, submission) are all that remain. The only path to shipping this month is acting on the two non-code gates today: host the legal pages (two hours, any free generator, no cost — this has been the top action item for seven weeks) and make the iOS/Android decision in writing so the plan can stop branching on an open question. Once those are done, the Day 27 work (screenshots, listing copy, production EAS build) can land in a focused two-day sprint, followed immediately by Play Console internal testing. A July Android launch is still possible if both non-code gates open this week. Every additional idle week reduces that window and compounds the distribution deficit — 61 days without a waitlist, a social handle, or a landing page is real launch-day risk that no amount of code quality can offset.
 
+---
+
+## 2026-07-20 — Weekly progress check
+
+# Cookable Build Progress
+
+**As of:** 2026-07-20
+
+## Schedule
+- **Plan target:** Day 30 of 30 (submission target was ~2026-05-29 — 52 calendar days ago)
+- **Actual progress:** Day 26 of 30 (last code shipped 2026-05-13 — 68 days ago)
+- **Variance:** 4 plan-days behind; submission window has passed by 7+ weeks; eighth consecutive snapshot with zero progress
+
+## What's done
+- **Week 1 (Days 1-7):** Expo SDK 54 scaffold, brand theme, 4-tab nav, Apple + Google auth (Google validated; Apple pending account), camera + resize + Supabase Storage upload, migrations 001-002, full audit pass
+- **Week 2 (Days 8-14):** `generate-recipes` Edge Function (Claude Sonnet 4.6 vision), camera-to-results loop, ingredient editor + regen (cache bypass, no quota increment on regen), recipe detail screen, save/favorite with free-tier 5-save guard, profile + scan counter, migration 003
+- **Week 3 (Days 15-21):** AdMob banner + interstitial (free-tier only, every 2nd lifetime scan), RevenueCat paywall + webhook (Android; iOS deferred), premium feature gates (scan limit, save limit, dietary filters, soft prompt on scan #2), `UserProvider` context lift, migration 004
+- **Day 22-23:** Pantry tab + grocery list (Plus-only) — `PantryView`, `GroceryView`, `usePantry`, `useGroceryList`, Edge Function pantry upsert for Plus users, `RecipeDetail` "Add to grocery list" button, paywall source branches, Locked Feature Matrix updated
+- **Day 24-25:** 8-screen onboarding flow (welcome → how-it-works → skill → cuisine → notifications → first-scan → auth-gate → soft-paywall); anonymous Supabase auth on screen 6; `linkIdentity()` conversion on screen 7; weekly Sunday push reminder; migration 005
+- **Day 26 polish (2026-05-13):** `RecipeLoading.tsx` branded full-screen linen scene (Pine bowl + Saffron swirl, 1.6s breathe loop, four time-driven Fraunces captions, reduce-motion + VoiceOver wired)
+
+## What's in flight
+- `plans/2026-05-09-week-4-polish-and-ship.md` — **Status: Days 22-25 Implemented; Days 26-30 still Draft**
+  - Day 27 (store screenshots, icon/splash to all sizes, privacy labels, data safety): not started
+  - Days 28-29 (TestFlight + Play Console internal beta, bug-fix pass): not started
+  - Day 30 (App Store Connect + Play Console submission): not started
+- All other plans (`week-1-foundation`, `week-2-core-magic`, `week-3-monetization`, `recipe-loading-scene`) — **Status: Implemented**
+
+## What's next (the critical path)
+1. **Legal pages (privacy policy + ToS) — non-code, ~2 hours, overdue by 8 weeks.** Both stores reject submissions without live URLs at `cookable.app/privacy` and `cookable.app/terms`. Use any free generator (termly.io, freeprivacypolicy.com) and host on the existing domain. This single action unblocks Play Console submission immediately.
+2. **Apple Developer account ($99/yr) purchase or a written commitment to Android-only launch.** Hard blocker for iOS TestFlight (Day 28) and App Store submission (Day 30). Eight snapshots have flagged this; continued deferral means a July launch is Android-only at best.
+3. **App Store + Play Store assets (Day 27)** — the next code task once legal pages are live; listing copy from `knowledge/11-app-store-listing.md`, 10 screenshots in all required sizes, iOS Privacy Nutrition Labels, Android Data Safety section, swap AdMob test IDs to prod in `eas.json`.
+
+## Pre-launch checklist
+- Accounts: 7 / 9 complete (Apple Developer, email marketing service missing)
+- Legal: 0 / 5 complete (privacy policy, ToS, support email, Privacy Nutrition Labels, Data Safety all outstanding)
+- Brand assets: 5 / 7 complete (App Store screenshots and press kit not yet done)
+- App readiness: 10 / 13 complete (Sign in with Apple blocked; push notifications coded but untested on device; dark mode not implemented)
+- Pre-launch testing: 0 / 4 complete (beta not yet started)
+- Distribution prep: 0 / 8 complete (landing page, email waitlist, social handles, TikTok content, PH hunter all outstanding)
+
+## Risks / blockers
+- **68 days since last code shipped (2026-05-13)** — eighth consecutive weekly snapshot with zero progress; the build has been stalled for over two months
+- **Submission target passed 52 days ago (2026-05-29)** — 4 plan-days of work (store assets, beta, submission) remain entirely unstarted; no external gates have been cleared in any prior snapshot
+- **Apple Developer account ($99/yr) still not purchased** — blocks iOS TestFlight and App Store submission with no workaround; if not resolved immediately, Android-only is the only viable launch path; commit to that decision in writing if the account will not be purchased
+- **Legal pages (privacy policy + ToS) not hosted** — both stores will reject without live URLs at `cookable.app/privacy` and `cookable.app/terms`; flagged in every snapshot since late May; this is a 2-hour task with no cost dependency that has been overdue for eight weeks
+- **Play Console internal-testing track + IAP products not created** — `cookable_plus_monthly` / `cookable_plus_annual` not set up in Play Console; blocks Android paywall sandbox testing before beta; no code required
+- **AdMob prod interstitial unit IDs missing from `eas.json`** — banner IDs wired; interstitial IDs must be added before the Day 28 production build
+- **Distribution prep at 0 / 8** — landing page, email waitlist, social handles, and TikTok content entirely unstarted; 68 days of pre-launch audience-building opportunity has been lost
+
+## Suggested focus this week
+Eight consecutive snapshots, zero movement. The app is built and the code is sound — this is not a technical problem. Two non-code actions are the only gates between the current state and a Play Console submission: host the legal pages (two hours, free generator, no cost, overdue eight weeks) and decide iOS vs Android-only in writing. Both have been the number-one action item since the first snapshot. If those two things happen this week, Day 27 (screenshots + listing copy) can close in a single focused sprint and an Android submission can land before the end of July. If they don't happen, a July launch is off the table. The distribution gap — 68 days without a waitlist, a social handle, or a landing page — is already a material launch risk that delays compound further. The app does not need more code. It needs two hours of non-code work and a decision.
+
